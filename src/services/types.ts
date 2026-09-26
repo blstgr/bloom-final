@@ -151,9 +151,15 @@ export type OpenMeteoForecastResponse = {
 };
 
 export type BigDataCloudReverseGeocodeResponse = {
-  /** Absent over open water and in some sparsely-mapped areas. */
+  /** Absent over open water and in some sparsely-mapped areas, and unreliable where a city sits
+   * inside a same-named district — see `pickCityName`. */
   city?: string;
   countryName?: string;
+  /** OpenStreetMap administrative boundaries, coarsest first. Level 8 is the city/town boundary
+   * where one is mapped. */
+  localityInfo?: {
+    administrative?: Array<{ adminLevel?: number; name?: string }>;
+  };
   locality?: string;
   principalSubdivision?: string;
 };

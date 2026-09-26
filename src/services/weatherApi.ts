@@ -90,6 +90,24 @@ export async function searchLocations(name: string): Promise<GeoLocation[]> {
  * needed purely to show the user where the forecast is for — the forecast itself only ever needs
  * the coordinates, which is why a failure here still yields a usable location.
  */
+// OpenStreetMap's city/town boundary level. Where one is mapped it names the city itself.
+const CITY_ADMIN_LEVEL = 8;
+
+/**
+ * The city name, which is not simply the `city` field.
+ *
+ * For Kharkiv that field returns "Kharkiv Raion" — the surrounding district, not the city — while
+ * the level-8 boundary correctly says "Kharkiv". For Kyiv there is no level-8 boundary at all and
+ * `city` is right. So: the boundary when it exists, the field otherwise.
+ */
+function pickCityName(response: BigDataCloudReverseGeocodeResponse): string | undefined {
+  const cityBoundary = response.localityInfo?.administrative?.find(
+    area => area.adminLevel === CITY_ADMIN_LEVEL,
+  );
+
+  return cityBoundary?.name ?? response.city ?? response.locality;
+}
+
 export async function reverseGeocode(latitude: number, longitude: number): Promise<GeoLocation> {
   const fallback: GeoLocation = {
     country: '',
@@ -104,7 +122,7 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
     const response = await fetchOpenMeteo<BigDataCloudReverseGeocodeResponse>(
       `${REVERSE_GEOCODING_URL}?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
     );
-    const name = response.city ?? response.locality;
+    const name = pickCityName(response);
 
     return name
       ? {

@@ -1,5 +1,5 @@
 import type { OpenMeteoForecastResponse, OpenMeteoGeocodingResponse } from './types';
-import { getForecast, searchLocations } from './weatherApi';
+import { getForecast, reverseGeocode, searchLocations } from './weatherApi';
 
 function mockFetchOnce(response: Partial<Response>) {
   global.fetch = jest.fn().mockResolvedValueOnce(response) as unknown as typeof fetch;
@@ -122,6 +122,64 @@ describe('getForecast', () => {
       kind: 'unknown',
       message: expect.stringContaining('500'),
       name: 'WeatherApiError',
+    });
+  });
+});
+
+describe('reverseGeocode', () => {
+  it('prefers the city boundary over the city field where they disagree', async () => {
+    // Real response shape for Kharkiv: `city` names the surrounding raion, the level-8
+    // administrative boundary names the city itself.
+    mockFetchOnce({
+      json: () => Promise.resolve({
+        city: 'Kharkiv Raion',
+        countryName: 'Ukraine',
+        localityInfo: {
+          administrative: [
+            { adminLevel: 4, name: 'Kharkivska oblast' },
+            { adminLevel: 6, name: 'Kharkiv Raion' },
+            { adminLevel: 8, name: 'Kharkiv' },
+          ],
+        },
+        principalSubdivision: 'Kharkivska oblast',
+      }),
+      ok: true,
+    });
+
+    await expect(reverseGeocode(49.9935, 36.2304)).resolves.toMatchObject({ name: 'Kharkiv' });
+  });
+
+  it('falls back to the city field where no city boundary is mapped', async () => {
+    // Kyiv has no level-8 boundary, and its `city` field is already correct.
+    mockFetchOnce({
+      json: () => Promise.resolve({
+        city: 'Kyiv',
+        countryName: 'Ukraine',
+        localityInfo: { administrative: [{ adminLevel: 4, name: 'Kyiv City' }] },
+      }),
+      ok: true,
+    });
+
+    await expect(reverseGeocode(50.4501, 30.5234)).resolves.toMatchObject({ name: 'Kyiv' });
+  });
+
+  it('keeps the coordinates usable when the service names nothing', async () => {
+    // The forecast only ever needs the coordinates, so a nameless answer is still a working one.
+    mockFetchOnce({ json: () => Promise.resolve({}), ok: true });
+
+    await expect(reverseGeocode(49.9935, 36.2304)).resolves.toMatchObject({
+      latitude: 49.9935,
+      longitude: 36.2304,
+      name: 'Current location',
+    });
+  });
+
+  it('keeps the coordinates usable when the service is unreachable', async () => {
+    mockFetchRejectionOnce();
+
+    await expect(reverseGeocode(49.9935, 36.2304)).resolves.toMatchObject({
+      latitude: 49.9935,
+      name: 'Current location',
     });
   });
 });
