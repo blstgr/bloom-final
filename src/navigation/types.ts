@@ -34,6 +34,7 @@ export type RootStackParamList = {
   [SCREENS.AUTH_START]: undefined;
   [SCREENS.SETTINGS_DRAWER]: NavigatorScreenParams<SettingsDrawerParamList> | undefined;
   [SCREENS.ADD_PLANT_STACK]: NavigatorScreenParams<AddPlantStackParamList> | undefined;
+  [SCREENS.LOCATION_SEARCH]: { currentLocationId?: string } | undefined;
   [SCREENS.PLANT_DETAIL]: { ownedPlantId?: string } | undefined;
   /** speciesName: the already-known name from the search result that led here — only used if
    * Perenual's species/details call needs the mocked-fallback path (see
@@ -95,6 +96,11 @@ export type PlantDetailScreenProps = NativeStackScreenProps<
 export type SpeciesInfoScreenProps = NativeStackScreenProps<
   RootStackParamList,
   typeof SCREENS.SPECIES_INFO
+>;
+
+export type LocationSearchScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  typeof SCREENS.LOCATION_SEARCH
 >;
 
 export type FavoritesScreenProps = CompositeScreenProps<

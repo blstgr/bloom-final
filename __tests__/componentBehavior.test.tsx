@@ -10,6 +10,7 @@ import { Tabs, type TabItem } from '../src/components/ui/Tabs';
 import { PlantDataProvider } from '../src/features/plants/data/PlantDataProvider';
 import { SettingsRow } from '../src/features/settings/components/SettingsPanel';
 import { WateringSlider } from '../src/features/watering/components/WateringSlider';
+import { WeatherProvider } from '../src/features/weather/WeatherProvider';
 import { MainTabBar, SCREENS } from '../src/navigation';
 import { store } from '../src/store/store';
 
@@ -224,11 +225,13 @@ describe('component behavior', () => {
       const renderer = render(
         <StoreProvider store={store}>
           <PlantDataProvider initialOwnedPlants={[]}>
-            <MainTabBar
+            <WeatherProvider>
+              <MainTabBar
               activeScreen={activeScreen}
               onAddPlant={jest.fn()}
               onNavigate={jest.fn()}
             />
+            </WeatherProvider>
           </PlantDataProvider>
         </StoreProvider>,
       );

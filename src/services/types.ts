@@ -89,3 +89,62 @@ export type UnsplashPhoto = {
 export type UnsplashSearchResponse = {
   results: UnsplashPhoto[];
 };
+
+// --- Open-Meteo ------------------------------------------------------------
+
+/** A place the forecast can be fetched for, however it was chosen. */
+export type GeoLocation = {
+  /** Region/state, kept because same-named cities are common ("Springfield"). */
+  admin1?: string;
+  country: string;
+  latitude: number;
+  /** Open-Meteo's numeric id, stringified to match how ids are carried elsewhere here. */
+  locationId: string;
+  longitude: number;
+  name: string;
+  timezone: string;
+};
+
+export type DailyWeather = {
+  /** ISO yyyy-mm-dd, in the location's own timezone. */
+  date: string;
+  /** FAO reference evapotranspiration, mm/day — how fast water leaves soil. */
+  et0: number;
+  humidityMean: number;
+  precipitation: number;
+  temperatureMax: number;
+};
+
+export type WeatherForecast = {
+  days: DailyWeather[];
+  fetchedAt: string;
+  latitude: number;
+  longitude: number;
+  timezone: string;
+};
+
+export type OpenMeteoGeocodingResponse = {
+  /** Omitted entirely, not empty, when nothing matches. */
+  results?: Array<{
+    admin1?: string;
+    country: string;
+    id: number;
+    latitude: number;
+    longitude: number;
+    name: string;
+    timezone: string;
+  }>;
+};
+
+export type OpenMeteoForecastResponse = {
+  daily: {
+    et0_fao_evapotranspiration: number[];
+    precipitation_sum: number[];
+    relative_humidity_2m_mean: number[];
+    temperature_2m_max: number[];
+    time: string[];
+  };
+  latitude: number;
+  longitude: number;
+  timezone: string;
+};

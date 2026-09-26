@@ -2,6 +2,7 @@ import React from 'react';
 
 import CameraIcon from '../../../assets/icons/camera.svg';
 import CheckIcon from '../../../assets/icons/check.svg';
+import ChevronRightIcon from '../../../assets/icons/chevron-right.svg';
 import CircleIcon from '../../../assets/icons/circle.svg';
 import CloseIcon from '../../../assets/icons/close.svg';
 import DropHappyIcon from '../../../assets/icons/drop-happy.svg';
@@ -30,6 +31,7 @@ import { colors, sizes } from '../../../theme';
 export type IconName =
   | 'camera'
   | 'check'
+  | 'chevronRight'
   | 'circle'
   | 'close'
   | 'dropHappy'
@@ -75,6 +77,7 @@ type SvgProps = { color?: string; width?: number; height?: number };
 const iconComponents: Record<IconName, React.ComponentType<SvgProps>> = {
   camera: CameraIcon,
   check: CheckIcon,
+  chevronRight: ChevronRightIcon,
   circle: CircleIcon,
   close: CloseIcon,
   dropHappy: DropHappyIcon,

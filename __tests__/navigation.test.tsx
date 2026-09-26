@@ -11,6 +11,7 @@ import { Button } from '../src/components/ui/Button';
 import { mockSpecies } from '../src/features/plants/data/mockPlants';
 import { PlantDataProvider, usePlantData } from '../src/features/plants/data/PlantDataProvider';
 import type { OwnedPlant, PlantSpecies } from '../src/features/plants/data/types';
+import { WeatherProvider } from '../src/features/weather/WeatherProvider';
 import {
   MainTabBar,
   SCREENS,
@@ -29,6 +30,7 @@ import { getSpeciesDetails, searchSpecies } from '../src/services/plantApi';
 import { generateSpeciesCopy } from '../src/services/plantCopyApi';
 import { searchPhoto } from '../src/services/unsplashApi';
 import favoritesReducer from '../src/store/favoritesSlice';
+import settingsReducer from '../src/store/settingsSlice';
 import { store } from '../src/store/store';
 
 jest.mock('react-native-image-picker');
@@ -179,7 +181,7 @@ function renderWithProviders(
     <StoreProvider store={favoritesStore}>
       <SafeAreaProvider initialMetrics={TEST_SAFE_AREA_METRICS}>
         <PlantDataProvider initialOwnedPlants={initialOwnedPlants}>
-          {children}
+          <WeatherProvider>{children}</WeatherProvider>
         </PlantDataProvider>
       </SafeAreaProvider>
     </StoreProvider>
@@ -553,7 +555,9 @@ test('toggles a species favorite from SpeciesInfoScreen and flips the heart butt
   // Isolated store per test — the app's singleton `store` is shared across every test in this
   // file, and this test dispatches into it, so a fresh instance keeps that mutation from leaking
   // into unrelated tests that render MainTabBar/other screens against the shared singleton.
-  const testStore = configureStore({ reducer: { favorites: favoritesReducer } });
+  const testStore = configureStore({
+    reducer: { favorites: favoritesReducer, settings: settingsReducer },
+  });
   const species = mockSpecies[0];
   let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
@@ -595,7 +599,7 @@ test('filters favorited species by the active tab on FavoritesScreen', async () 
   const zzPlant = mockSpecies.find(species => species.speciesId === 'zz-plant')!;
   const parlorPalm = mockSpecies.find(species => species.speciesId === 'parlor-palm')!;
   const testStore = configureStore({
-    reducer: { favorites: favoritesReducer },
+    reducer: { favorites: favoritesReducer, settings: settingsReducer },
     preloadedState: {
       favorites: [
         { addedAt: '2026-01-01T00:00:00.000Z', image: zzPlant.image, speciesId: zzPlant.speciesId, speciesName: zzPlant.speciesName },
@@ -643,7 +647,9 @@ test('FavoritesScreen has no designed empty state — it falls back to Home if r
   // The heart nav item only exists while favorites.length > 0, so landing here empty (e.g.
   // unfavoriting your last plant while already on this screen) should navigate to Home
   // immediately rather than render a dedicated empty state.
-  const testStore = configureStore({ reducer: { favorites: favoritesReducer } });
+  const testStore = configureStore({
+    reducer: { favorites: favoritesReducer, settings: settingsReducer },
+  });
   const tabNavigate = jest.fn();
 
   await ReactTestRenderer.act(() => {

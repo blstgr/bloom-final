@@ -3,6 +3,7 @@ import React from 'react';
 import { NavBar, type NavItem } from '../components/ui/NavBar';
 import { usePlantData } from '../features/plants/data/PlantDataProvider';
 import { isWateringDue } from '../features/plants/data/schedule';
+import { useEffectiveWateringInterval } from '../features/weather/useEffectiveWateringInterval';
 import { useAppSelector } from '../store/hooks';
 
 import { SCREENS } from './constants';
@@ -24,9 +25,13 @@ export function MainTabBar({
 }: MainTabBarProps) {
   const { getSpeciesById, ownedPlants } = usePlantData();
   const favoritesCount = useAppSelector(state => state.favorites.length);
+  const getEffectiveInterval = useEffectiveWateringInterval();
   const dueCount = ownedPlants.filter(ownedPlant => {
     const species = getSpeciesById(ownedPlant.speciesId);
-    return species != null && isWateringDue(ownedPlant, species);
+    return (
+      species != null &&
+      isWateringDue(ownedPlant, species, undefined, getEffectiveInterval(species))
+    );
   }).length;
   const navItems = React.useMemo<NavItem<MainTabBarItemKey>[]>(() => {
     const items: NavItem<MainTabBarItemKey>[] = [

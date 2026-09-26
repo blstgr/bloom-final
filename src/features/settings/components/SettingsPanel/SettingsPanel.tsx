@@ -20,7 +20,11 @@ export function SettingsPanel({ onLogoutPress, rows }: SettingsPanelProps) {
     <View style={styles.border}>
       <View style={styles.inner}>
         {rows.map(row => {
-          const rowKeyBase = `${row.variant}-${row.label ?? row.value ?? row.buttonLabel ?? 'row'}`;
+          // Only `variant` is common to every row shape, so the rest of the key is read
+          // defensively rather than by reaching into props a given variant may not have.
+          const rowLabel =
+            'label' in row ? row.label : undefined;
+          const rowKeyBase = `${row.variant}-${rowLabel ?? 'row'}`;
           const rowKeyCount = rowKeyCounts.get(rowKeyBase) ?? 0;
           rowKeyCounts.set(rowKeyBase, rowKeyCount + 1);
 

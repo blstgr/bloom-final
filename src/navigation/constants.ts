@@ -7,6 +7,7 @@ export const SCREENS = {
   FAVORITES: 'Favorites',
   HOME: 'Home',
   LIBRARY: 'Library',
+  LOCATION_SEARCH: 'LocationSearch',
   MAIN_TABS: 'MainTabs',
   PLANT_DETAIL: 'PlantDetail',
   SETTINGS_DRAWER: 'SettingsDrawer',

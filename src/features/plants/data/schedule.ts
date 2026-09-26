@@ -54,10 +54,14 @@ export function getScheduleBaseDate(ownedPlant: OwnedPlant): Date {
   return new Date(lastWateredAt ?? ownedPlant.addedAt);
 }
 
+/** Every function here takes the interval as an override rather than always reading
+ * `species.wateringIntervalDays`, so weather-adjusted and unadjusted callers share one
+ * implementation. Omitting it is exactly the behaviour before any weather feature existed. */
 export function buildPlantSchedule(
   ownedPlant: OwnedPlant,
   species: PlantSpecies,
   count = DEFAULT_SCHEDULE_ITEM_COUNT,
+  intervalDays = species.wateringIntervalDays,
 ): PlantScheduleItem[] {
   const lastWateredAt = ownedPlant.wateringHistory.at(-1);
   const baseDate = getScheduleBaseDate(ownedPlant);
@@ -65,7 +69,7 @@ export function buildPlantSchedule(
   return Array.from({ length: count }, (_, index) => {
     const scheduleDate = addDays(
       baseDate,
-      getScheduleOffsetDays(index, species.wateringIntervalDays),
+      getScheduleOffsetDays(index, intervalDays),
     );
     const { day, month } = formatScheduleDate(scheduleDate);
 
@@ -89,12 +93,13 @@ export function isWateringTooSoon(
   ownedPlant: OwnedPlant,
   species: PlantSpecies,
   now = new Date(),
+  intervalDays = species.wateringIntervalDays,
 ): boolean {
   const lastWateredAt = ownedPlant.wateringHistory.at(-1);
   if (!lastWateredAt) return false;
 
   return !isCalendarDayOnOrBefore(
-    getTooSoonDate(new Date(lastWateredAt), species.wateringIntervalDays),
+    getTooSoonDate(new Date(lastWateredAt), intervalDays),
     now,
   );
 }
@@ -103,6 +108,7 @@ export function isWateringDue(
   ownedPlant: OwnedPlant,
   species: PlantSpecies,
   now = new Date(),
+  intervalDays = species.wateringIntervalDays,
 ): boolean {
   const lastWateredAt = ownedPlant.wateringHistory.at(-1);
   if (!lastWateredAt) {
@@ -112,6 +118,6 @@ export function isWateringDue(
   const lastWateredDate = new Date(lastWateredAt);
   if (isSameCalendarDay(lastWateredDate, now)) return false;
 
-  const dueDate = addDays(lastWateredDate, species.wateringIntervalDays);
+  const dueDate = addDays(lastWateredDate, intervalDays);
   return isCalendarDayOnOrBefore(dueDate, now);
 }

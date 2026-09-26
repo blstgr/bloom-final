@@ -4,7 +4,9 @@ import React from 'react';
 import { Provider as StoreProvider } from 'react-redux';
 
 import { PlantDataProvider } from '../features/plants/data/PlantDataProvider';
+import { WeatherProvider } from '../features/weather/WeatherProvider';
 import { AuthStartScreen } from '../screens/AuthStartScreen';
+import { LocationSearchScreen } from '../screens/LocationSearchScreen';
 import { PlantDetailScreen } from '../screens/PlantDetailScreen';
 import { SpeciesInfoScreen } from '../screens/SpeciesInfoScreen';
 import { store } from '../store/store';
@@ -20,6 +22,8 @@ export function RootNavigator() {
   return (
     <StoreProvider store={store}>
       <PlantDataProvider>
+        {/* Reads the settings slice, so it sits inside StoreProvider; independent of plant data. */}
+        <WeatherProvider>
         <NavigationContainer>
           <Stack.Navigator
             // Explicit rather than per-platform default, so Android matches iOS's slide.
@@ -43,8 +47,10 @@ export function RootNavigator() {
               name={SCREENS.SPECIES_INFO}
               options={{ gestureEnabled: false }}
             />
+            <Stack.Screen component={LocationSearchScreen} name={SCREENS.LOCATION_SEARCH} />
           </Stack.Navigator>
         </NavigationContainer>
+        </WeatherProvider>
       </PlantDataProvider>
     </StoreProvider>
   );

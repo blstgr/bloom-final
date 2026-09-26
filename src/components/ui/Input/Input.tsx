@@ -29,6 +29,8 @@ export type InputActions = [] | [InputAction] | [InputAction, InputAction];
 export type InputProps = {
   accessibilityLabel?: string;
   actions?: InputActions;
+  /** Raises the keyboard on mount. For a screen whose only purpose is the search it contains. */
+  autoFocus?: boolean;
   disabled?: boolean;
   error?: string;
   leadingIcon?: IconName;
@@ -47,6 +49,7 @@ export type InputProps = {
 export function Input({
   accessibilityLabel,
   actions = [],
+  autoFocus = false,
   disabled = false,
   error,
   leadingIcon,
@@ -102,6 +105,7 @@ export function Input({
           <TextInput
             ref={inputRef}
             accessibilityLabel={resolvedAccessibilityLabel}
+            autoFocus={autoFocus}
             blurOnSubmit
             editable={!disabled}
             keyboardType={type === 'number' ? 'numeric' : type === 'email' ? 'email-address' : 'default'}

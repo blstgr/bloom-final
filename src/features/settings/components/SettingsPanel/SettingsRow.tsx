@@ -1,20 +1,26 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '../../../../components/ui/AppText';
 import { Button } from '../../../../components/ui/Button';
+import { Icon } from '../../../../components/ui/Icon';
 import { Input } from '../../../../components/ui/Input';
+import { Toggle } from '../../../../components/ui/Toggle';
 import { colors, spacing } from '../../../../theme';
 
 const REVEALED_SUFFIX_LENGTH = 4;
+// Matches Toggle's own disabled dimming so a whole disabled row reads as one thing.
+const DISABLED_ROW_OPACITY = 0.4;
 
 export type SettingsRowVariant =
   | 'text'
   | 'textWithLabel'
   | 'textWithLabelAndButton'
-  | 'buttonOnly';
+  | 'buttonOnly'
+  | 'toggle'
+  | 'navigation';
 
-export type SettingsRowProps = {
+type TextSettingsRowProps = {
   buttonLabel?: string;
   editFields?: Array<{
     label: string;
@@ -29,10 +35,90 @@ export type SettingsRowProps = {
   onSaveFields?: (values: string[]) => void;
   secure?: boolean;
   value?: string;
-  variant: SettingsRowVariant;
+  variant: 'text' | 'textWithLabel' | 'textWithLabelAndButton' | 'buttonOnly';
 };
 
-export function SettingsRow({
+type ToggleSettingsRowProps = {
+  disabled?: boolean;
+  label: string;
+  onValueChange: (next: boolean) => void;
+  value: boolean;
+  variant: 'toggle';
+};
+
+type NavigationSettingsRowProps = {
+  disabled?: boolean;
+  label: string;
+  onPress?: () => void;
+  /** The current choice, shown at the row's trailing edge before the chevron. */
+  value: string;
+  variant: 'navigation';
+};
+
+/**
+ * A discriminated union rather than one flat bag of optional props: `onValueChange` is
+ * meaningless on a text row and `editFields` is meaningless on a toggle, and a union makes those
+ * combinations unrepresentable instead of silently ignored at runtime.
+ */
+export type SettingsRowProps =
+  | TextSettingsRowProps
+  | ToggleSettingsRowProps
+  | NavigationSettingsRowProps;
+
+export function SettingsRow(props: SettingsRowProps) {
+  if (props.variant === 'toggle') return <ToggleRow {...props} />;
+  if (props.variant === 'navigation') return <NavigationRow {...props} />;
+
+  return <TextRow {...props} />;
+}
+
+function ToggleRow({ disabled = false, label, onValueChange, value }: ToggleSettingsRowProps) {
+  return (
+    <View style={styles.row}>
+      <View style={styles.copy}>
+        <AppText style={disabled ? styles.disabledLabel : undefined}>{label}</AppText>
+      </View>
+      <Toggle
+        accessibilityLabel={label}
+        disabled={disabled}
+        onValueChange={onValueChange}
+        value={value}
+      />
+    </View>
+  );
+}
+
+function NavigationRow({ disabled = false, label, onPress, value }: NavigationSettingsRowProps) {
+  const isInteractive = Boolean(onPress) && !disabled;
+
+  // Not a Pressable when there is nowhere to go: a row that looks tappable and is not is worse
+  // than a plain one. This is the "Your location" row while the location is being detected.
+  if (!isInteractive) {
+    return (
+      <View style={styles.row}>
+        <AppText style={disabled ? styles.disabledLabel : undefined}>{label}</AppText>
+        <AppText style={disabled ? styles.disabledLabel : styles.navigationValue}>{value}</AppText>
+      </View>
+    );
+  }
+
+  return (
+    <Pressable
+      accessibilityLabel={`${label}, ${value}`}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      onPress={onPress}
+      style={styles.row}>
+      <AppText>{label}</AppText>
+      <View style={styles.navigationValueGroup}>
+        <AppText style={styles.navigationValue}>{value}</AppText>
+        <Icon name="chevronRight" size="md" color={colors.icon.primary} />
+      </View>
+    </Pressable>
+  );
+}
+
+function TextRow({
   buttonLabel,
   editFields,
   editable = false,
@@ -43,7 +129,7 @@ export function SettingsRow({
   secure = false,
   value = '',
   variant,
-}: SettingsRowProps) {
+}: TextSettingsRowProps) {
   const [isEditing, setIsEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(value);
   const [fieldDrafts, setFieldDrafts] = React.useState<string[]>(
@@ -151,6 +237,17 @@ const styles = StyleSheet.create({
   editFields: {
     gap: spacing.xs,
     width: '100%',
+  },
+  disabledLabel: {
+    opacity: DISABLED_ROW_OPACITY,
+  },
+  navigationValue: {
+    color: colors.text.placeholder,
+  },
+  navigationValueGroup: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
   },
   row: {
     alignItems: 'flex-end',

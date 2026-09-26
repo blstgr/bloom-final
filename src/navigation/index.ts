@@ -9,6 +9,7 @@ export type {
   FavoritesScreenProps,
   HomeScreenProps,
   LibraryScreenProps,
+  LocationSearchScreenProps,
   PlantDetailScreenProps,
   RootNavigation,
   RootStackParamList,

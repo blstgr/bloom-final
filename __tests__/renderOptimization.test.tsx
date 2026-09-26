@@ -6,6 +6,7 @@ import ReactTestRenderer from 'react-test-renderer';
 import { mockSpecies } from '../src/features/plants/data/mockPlants';
 import { PlantDataProvider, usePlantData } from '../src/features/plants/data/PlantDataProvider';
 import type { OwnedPlant, PlantSpecies } from '../src/features/plants/data/types';
+import { WeatherProvider } from '../src/features/weather/WeatherProvider';
 import { SCREENS, type HomeScreenProps } from '../src/navigation';
 import { HomeScreen } from '../src/screens/HomeScreen';
 import { store } from '../src/store/store';
@@ -78,8 +79,10 @@ test('an unrelated PlantDataProvider update does not re-render the Home plant ca
       <StoreProvider store={store}>
         <SafeAreaProvider initialMetrics={TEST_SAFE_AREA_METRICS}>
           <PlantDataProvider initialOwnedPlants={ownedPlants}>
-            <ContextProbe />
+            <WeatherProvider>
+              <ContextProbe />
             <HomeScreen {...createHomeProps()} />
+            </WeatherProvider>
           </PlantDataProvider>
         </SafeAreaProvider>
       </StoreProvider>,
@@ -104,8 +107,10 @@ test('a real owned-plant change still re-renders its card', async () => {
       <StoreProvider store={store}>
         <SafeAreaProvider initialMetrics={TEST_SAFE_AREA_METRICS}>
           <PlantDataProvider initialOwnedPlants={[createOwnedPlant(0), createOwnedPlant(1)]}>
-            <ContextProbe />
+            <WeatherProvider>
+              <ContextProbe />
             <HomeScreen {...createHomeProps()} />
+            </WeatherProvider>
           </PlantDataProvider>
         </SafeAreaProvider>
       </StoreProvider>,

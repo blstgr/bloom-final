@@ -94,7 +94,7 @@ module.exports = {
       // data/** holds literal domain values (e.g. a species' wateringIntervalDays) —
       // those are content, not unnamed style/layout constants, so they're excluded
       // the same way tests are.
-      excludedFiles: ['**/*.test.tsx', '**/data/**'],
+      excludedFiles: ['**/*.test.ts', '**/*.test.tsx', '**/data/**'],
       rules: {
         'no-magic-numbers': [
           'error',
