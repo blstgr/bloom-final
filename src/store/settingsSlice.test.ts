@@ -58,6 +58,27 @@ describe('settingsSlice', () => {
     expect(state.autoDetectLocation).toBe(false);
   });
 
+  it('keeps the detected city when detection is switched off', () => {
+    // Switching off means "stop updating this", not "forget where I am".
+    const detected = buildState({ detectedLocation: kyiv });
+    const frozen = settingsReducer(detected, setAutoDetectLocation(false));
+
+    expect(frozen.selectedLocation).toEqual(kyiv);
+  });
+
+  it('does not overwrite a city the user chose themselves', () => {
+    const chosen = settingsReducer(
+      buildState({ detectedLocation: kyiv }),
+      setSelectedLocation(london),
+    );
+    const toggled = settingsReducer(
+      settingsReducer(chosen, setAutoDetectLocation(true)),
+      setAutoDetectLocation(false),
+    );
+
+    expect(toggled.selectedLocation).toEqual(london);
+  });
+
   it('keeps the chosen city when detection is switched back on', () => {
     const chosen = settingsReducer(buildState(), setSelectedLocation(london));
     const redetected = settingsReducer(chosen, setAutoDetectLocation(true));
@@ -87,8 +108,8 @@ describe('selectActiveLocation', () => {
     expect(selectActiveLocation(state)).toEqual(london);
   });
 
-  it('is null when detection is off and no city was ever chosen', () => {
-    const state = buildRootState(buildState({ autoDetectLocation: false, detectedLocation: kyiv }));
+  it('is null when detection is off and there was never a location at all', () => {
+    const state = buildRootState(buildState({ autoDetectLocation: false }));
 
     expect(selectActiveLocation(state)).toBeNull();
   });

@@ -9,7 +9,7 @@ import { AuthStartScreen } from '../screens/AuthStartScreen';
 import { LocationSearchScreen } from '../screens/LocationSearchScreen';
 import { PlantDetailScreen } from '../screens/PlantDetailScreen';
 import { SpeciesInfoScreen } from '../screens/SpeciesInfoScreen';
-import { store } from '../store/store';
+import { hydrateStore, store } from '../store/store';
 
 import { AddPlantStackNavigator } from './AddPlantStackNavigator';
 import { SCREENS } from './constants';
@@ -19,6 +19,13 @@ import type { RootStackParamList } from './types';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
+  // Restores saved favorites and settings once, on launch. Deliberately not awaited before
+  // rendering: the first screen is the auth screen, which reads neither, so blocking the tree on
+  // a disk read would only add a blank frame.
+  React.useEffect(() => {
+    hydrateStore();
+  }, []);
+
   return (
     <StoreProvider store={store}>
       <PlantDataProvider>

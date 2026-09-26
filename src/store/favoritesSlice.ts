@@ -28,6 +28,11 @@ const favoritesSlice = createSlice({
         state.splice(existingIndex, 1);
       }
     },
+    /** Replaces the list wholesale with what was read from storage. Deliberately not matched by
+     * the persistence listener, so restoring cannot trigger a write back. */
+    hydrateFavorites: (state, action: PayloadAction<FavoritesState>) => {
+      state.splice(0, state.length, ...action.payload);
+    },
     toggleFavorite: (state, action: PayloadAction<FavoriteItem>) => {
       const existingIndex = state.findIndex(item => item.speciesId === action.payload.speciesId);
       if (existingIndex === -1) {
@@ -39,5 +44,10 @@ const favoritesSlice = createSlice({
   },
 });
 
-export const { addFavorite, removeFavorite, toggleFavorite } = favoritesSlice.actions;
+export const {
+  addFavorite,
+  hydrateFavorites,
+  removeFavorite,
+  toggleFavorite,
+} = favoritesSlice.actions;
 export default favoritesSlice.reducer;

@@ -9,6 +9,7 @@ import {
   getSpeciesById as getMockSpeciesById,
   initialOwnedPlants as defaultInitialOwnedPlants,
 } from './mockPlants';
+import { loadOwnedPlants, saveOwnedPlants } from './ownedPlantsStorage';
 import {
   assemblePlantSpecies,
   hasKnownName,
@@ -137,6 +138,9 @@ export function PlantDataProvider({
   initialOwnedPlants = defaultInitialOwnedPlants,
 }: PlantDataProviderProps) {
   const [ownedPlants, setOwnedPlants] = React.useState<OwnedPlant[]>(initialOwnedPlants);
+  // Guards the save effect below: without it the first render would immediately write the seed
+  // data over whatever is on disk, before the read that would have restored it has landed.
+  const hasHydratedRef = React.useRef(false);
   const [detections, setDetections] = React.useState<PlantDetection[]>([]);
   const [pendingLibrarySearch, setPendingLibrarySearch] = React.useState<string | null>(null);
   const [searchHistory, setSearchHistory] = React.useState<PlantSpecies[]>([]);
@@ -508,6 +512,33 @@ export function PlantDataProvider({
     },
     [commitOwnedPlants],
   );
+
+  // Restore once on mount, then save on every change. The two effects are ordered by the
+  // `hasHydratedRef` guard rather than by hook order, because the read is async and would
+  // otherwise lose the race against the first save.
+  React.useEffect(() => {
+    let cancelled = false;
+
+    loadOwnedPlants()
+      .then(stored => {
+        if (cancelled || !stored) return;
+        setOwnedPlants(stored);
+        ownedPlantsRef.current = stored;
+        ownedPlantIndexRef.current = getNextOwnedPlantIndex(stored);
+      })
+      .finally(() => {
+        if (!cancelled) hasHydratedRef.current = true;
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (!hasHydratedRef.current) return;
+    saveOwnedPlants(ownedPlants);
+  }, [ownedPlants]);
 
   const value = React.useMemo<PlantDataContextValue>(
     () => ({
