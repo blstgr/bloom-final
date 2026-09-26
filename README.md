@@ -1,174 +1,179 @@
-# Bloom — performance optimisation
+# Bloom
 
-Bloom is a React Native plant-care app: identify a plant from a photo, track watering, and save
-favourites.
+Watering reminders for people trying their best.
 
-Performance optimisation scope: 
-* added animation
-* stopped excessive re-rendering
-* reduced production bundle size
+Bloom identifies a plant from a photo, keeps a watering schedule for the ones you own, and lets
+you read up on anything before you buy it. This version adds weather-aware watering, remembers
+your plants between launches, and rebuilds the screens so moving between them doesn't jump.
 
----
-
-## 1. Analysis
-
-**Animation.** The tab bar and the Favorites filter chips both switched state instantly,
-with no transition.
-
-**Fewer re-renders.** `PlantDataProvider` holds all its state in one context value, so any
-change to it re-renders every consumer. On top of that `HomeScreen` rebuilt its `plants` array on
-every render, gave each card a new `onPress` function, and `PlantCard` was not memoized. Typing in
-the Library search box re-rendered every card on Home.
-
-**Bundle size.** Storybook: 1,012 KB in the production bundle. Larger than `react-native`
-(777 KB) and about three times the size of all app code (450 KB).
+| Home | Plant wiki | Settings |
+|---|---|---|
+| ![Home](docs/screenshots/home-empty.png) | ![Plant wiki](docs/screenshots/library-empty-search.png) | ![Settings](docs/screenshots/weather-settings.png) |
 
 ---
 
-## 2. Animation (Reanimated)
+## Where this version started
 
-Two components animate: the bottom tab bar (`src/components/ui/NavBar`) and the Favorites filter
-chips (`src/components/ui/Tabs`).
+Bloom already did a lot. Photos resolve to a real species through Pl@ntNet, care facts come from
+Perenual, the descriptions are generated, and the photography is Unsplash's. Navigation is fully
+typed end to end, the design system is twenty-odd components each in their own folder, and the
+previous round of work cut the bundle and stopped the plant grid re-rendering on every keystroke.
 
-Both use one pill that slides to the selected item. Tap a tab or a chip: the dark pill moves to
-it, and the icon or label under it switches from dark to white.
+Living with it turned up four things it got wrong.
 
-The shared hook is `src/components/ui/SlidingIndicator/useSlidingIndicator.ts`. It measures each
-item with `onLayout`, holds the pill's position in `useSharedValue`, and springs it to the active
-item:
+**It forgot everything.** Close the app and every plant you'd added was gone, along with every
+watering you'd logged. Since the schedule is calculated from the last entry in that history, the
+app quietly reset its own core feature every time you quit it.
 
-```tsx
-x.value = withSpring(target.x, springs.slidingIndicator);
-width.value = withSpring(target.width, springs.slidingIndicator);
+**Watering advice was a fixed number.** Each species carried an interval — fourteen days for a
+Monstera — and used it in a damp October and a dry July alike, in Reykjavik and in Dubai.
+
+**Switching tabs was an instant cut.** The bottom bar's indicator glided smoothly between icons
+while the screen behind it snapped. And because the Library's empty state was laid out in a
+different box from Home's, the two didn't line up.
+
+**Searching the wiki felt broken.** Type "zz", wait, keep waiting. Nothing on screen said the app
+had even registered the keystroke.
+
+## What's new
+
+### Watering that follows the weather
+
+Bloom reads the daily forecast for where you are and moves each plant's watering date to match.
+The figure it uses is reference evapotranspiration — a single millimetres-per-day number that
+folds together temperature, humidity, wind and sunlight to describe how fast water actually
+leaves soil. A fourteen-day plant becomes a ten-day plant in Dubai and a twenty-day plant in
+Reykjavik.
+
+That measure catches things a temperature rule would miss. Singapore is hotter than Madrid and
+gets the *gentler* schedule, because ninety percent humidity slows evaporation to a crawl.
+
+| City | Mean ET₀ | Interval for a 14-day plant |
+|---|---|---|
+| Dubai | 5.89 mm/day | 10 days |
+| Delhi | 4.56 | 11 days |
+| Madrid | 4.41 | 12 days |
+| Singapore | 3.75 | 13 days |
+| London | 2.33 | 16 days |
+| Kyiv | 1.96 | 17 days |
+| Reykjavik | 1.12 | 20 days |
+
+*Live Open-Meteo readings for one day; the numbers move with the seasons.*
+
+The adjustment is deliberately bounded. A species' interval is horticultural knowledge and an
+outdoor measurement is only a proxy for what a pot on your windowsill experiences, so the weather
+nudges that interval rather than overruling it. It's also why this is a switch you can turn off:
+if your home is climate controlled, the weather outside genuinely doesn't apply, and Bloom then
+behaves exactly as it did before.
+
+Bloom works out where you are from your phone's time zone, which needs no location permission and
+no prompt — the same trick iOS's own Date & Time settings use. Turn detection off and you can pick
+any city instead; the one you already had stays put until you change it.
+
+### Your plants stay yours
+
+Plants, watering history, favourites and settings all survive closing the app. Adding a plant and
+watering it are the two things in Bloom nobody can reconstruct from anywhere else, and they now
+persist.
+
+If a saved file is ever unreadable, Bloom starts anyway and loses only that part. Losing your
+favourites is recoverable; an app that won't open isn't.
+
+### Screens that hold still
+
+Tabs cross-fade instead of cutting. For that to read as one screen becoming another, the content
+has to stay where it is — so Home, Water and the plant wiki now share one empty-state component
+and land it on the same pixel on all three.
+
+The wiki's search bar moved to the bottom, within thumb reach, sitting under the subtitle as part
+of the same block and rising above the keyboard when you type. That freed the top-right corner for
+the settings button every other tab already had.
+
+### Search that answers immediately
+
+Bloom ships twelve curated species, and they're now searched on your phone before any request
+goes out — type "zz" and ZZ plant appears with no network round trip at all, and opens instantly
+too. Repeated searches are cached. Only a genuinely new plant waits on Perenual, and that wait now
+shows a spinner instead of an empty screen.
+
+This was measured rather than guessed: Perenual's response time is one to three seconds depending
+on the hour, all of it server-side. Nothing in the app can make it faster, so the work went into
+not waiting on it.
+
+## How state is organised, and why it's split
+
+Three kinds of state, three homes. The split is about the shape of the data, not about using two
+libraries for their own sake.
+
+| State | Where | Why there |
+|---|---|---|
+| Plants you own, detections, species cache, search history | **Context** (`PlantDataProvider`) | Read and written from nine unrelated screens. Passing it as props would thread it through every intermediate navigator |
+| Favourites, weather switches, chosen city | **Redux** (`favoritesSlice`, `settingsSlice`) | Small, serialisable, and read from places with no parent/child relationship — the heart on a species page, the tab bar, the favourites list, the settings panel |
+| Forecast data | **Context** (`WeatherProvider`) | Asynchronous, with loading and error states, cached by coordinates and deduplicated in flight. A thunk plus three status fields would be more machinery for less clarity |
+| Search text, focus, in-flight results | `useState` | Nothing outside the screen reads it |
+
+Redux earns its place where state is small, serialisable and shared between unrelated components —
+which is also what makes it trivial to persist, since the listener that saves it only has to watch
+the handful of actions that change it. Context earns its place where the data is large, holds
+functions, and is genuinely owned by one feature.
+
+One rule holds across both: every screen that asks "does this plant need water?" goes through a
+single hook. The tab bar's badge and the Water screen's list can't disagree, because they compute
+it the same way.
+
+## How the code is organised
+
+```
+src/
+├── components/ui/        design system — one folder per component, each with an index.ts
+├── features/
+│   ├── plants/           plant domain: provider, species resolution, schedule maths
+│   ├── settings/         settings panel and its rows
+│   ├── watering/         watering cards, slider, schedule display
+│   └── weather/          forecast provider, location detection, the ET₀ adjustment
+├── navigation/           navigators, typed route params, tab bar
+├── screens/              one file per screen, composed from the above
+├── services/             every network call — Perenual, Pl@ntNet, DeepSeek, Unsplash, Open-Meteo
+├── store/                Redux slices, persistence
+└── theme/                colour, spacing, radii, typography tokens
 ```
 
-`useAnimatedStyle` turns those into the pill's transform and width. Nav items are a fixed 64px so
-only `x` moves; chips are as wide as their text so `width` animates too. The spring config is one
-shared token in `src/theme/motion.ts`. `useReducedMotion()` skips the animation when the OS
-accessibility setting is on.
+The boundaries that make it navigable:
 
-The tab bar had to be refactored for the animation to work. 
+- **Every HTTP call lives in `services/`.** Five external APIs, each behind a module with its own
+  typed error. No screen or component knows a URL.
+- **One component per folder, exported through a barrel.** Imports reach for `@components/ui/Button`,
+  never a file path inside it — enforced by lint, not by convention.
+- **Colour only exists in `theme/`.** Not one hex value or `rgba()` anywhere else in `src` — the
+  single match outside it is a comment explaining why two tokens resolve to the same white.
+- **State logic lives outside screens.** A screen composes; the provider and the slices decide.
+- **Domain maths is its own module with its own tests.** `wateringAdjustment`, `schedule`,
+  `difficulty` and `speciesSearch` are pure functions, tested without rendering anything.
 
-Each of the four tab screens rendered its own copy of the bar, and `detachInactiveScreens={false}`
-keeps every screen mounted. That meant four bars alive at once, each with a permanently fixed
-active item. There was never one pill that could move, only four that were swapped in and out.
+236 tests across 26 suites, with the type-checker and linter clean.
 
-What changed:
-
-- `TabNavigator` now renders one `FloatingTabBar` through its `tabBar` prop, positioned absolutely
-  so the frosted bar still sits over scrolling content.
-- The four tab screens no longer render a bar. They ask `ScreenLayout` to reserve the same bottom
-  space with a new `reserveBottomBarSpace` prop. Reserving space and rendering the bar used to
-  be the same prop; they are now separate.
-- `MainTabBar` reads the active tab from navigation state instead of being told by each screen.
-
-This also removed four duplicated blocks and stopped three redundant bars recomputing the
-watering due-count on every state change.
-
-![Tab and chip animation](docs/screenshots/perf-tabs-animation.gif)
-
----
-
-## 3. Fewer re-renders
-
-- `PlantCard` wrapped in `React.memo`.
-- `HomeScreen`'s `plants` array built with `useMemo`.
-- The per-card `onPress` closure replaced with a stable `useCallback`, bound to its plant id inside
-  a memoized `HomePlantGridItem`.
-
-`React.memo` only helps if the props are the same objects as last time, so the stable `useCallback`
-is what makes the other two work.
-
-`HomePlantGridItem` logs each render behind `__DEV__`:
-
-```
-[render] HomePlantGridItem owned-plant-0
-```
-
-With two plants on Home, something then writes to search history — state the Home grid never
-reads. Before: 4 renders, both cards re-rendered. After: 2 renders, neither card re-rendered.
-The screenshot below shows both runs. The same log appears in Metro when running the app: open
-Home, then type in the Library search box.
-
-The same behaviour is covered by a test so it stays fixed, `__tests__/renderOptimization.test.tsx`:
-
-```
-✓ an unrelated PlantDataProvider update does not re-render the Home plant cards
-✓ a real owned-plant change still re-renders its card
-```
-
-The second test checks the grid still updates when a plant actually changes, so the
-memoization can't make it stale.
-
-![Render counts before and after](docs/screenshots/perf-render-tests.png)
-
----
-
-## 4. Bundle size
-
-### Before
-
-4,625,619 bytes. Largest items:
-
-| Package | Size |
-| --- | --- |
-| `storybook` | 1,012 KB |
-| `react-native` | 777 KB |
-| `react-native-reanimated` | 748 KB |
-| app code | 450 KB |
-| `@storybook/icons` | 161 KB |
-| `@gorhom/bottom-sheet` | 147 KB |
-
-### What was removed
-
-Storybook. It was added for the earlier UI-library assignment and is not part of the app, but it
-was still compiled into every production build: `App.tsx` guarded it with
-`process.env.STORYBOOK_ENABLED`, which is a runtime check, while Metro builds its dependency graph
-statically and pulled the whole tree in regardless.
-
-Removed: both packages, `.rnstorybook/`, 22 `*.stories.tsx` files, two helper scripts, and the
-`App.tsx` / `metro.config.js` wiring. It stays recoverable from git history.
-
-The brief suggests swapping a heavy package for a lighter one. There is no `moment` or `lodash`
-here, and no other dependency has a lighter equivalent:
-
-| Package | Alternative? |
-| --- | --- |
-| `@react-navigation/*`, `@reduxjs/toolkit`, `react-redux` | Required by earlier assignments |
-| `react-native-reanimated`, `react-native-worklets`, `react-native-gesture-handler` | This assignment's animation |
-| `react-native-svg` | Every icon |
-| `@react-native-community/blur`, `react-native-linear-gradient` | The design |
-| `react-native-image-picker`, `@react-native-async-storage/async-storage` | Camera, storage |
-
-### After
-
-| | Bytes |
-| --- | --- |
-| Before | 4,625,619 |
-| After | 2,778,691 |
-| **Saved** | **1,846,928 — 39.9%** |
-
-`storybook`, `@storybook/icons`, `@gorhom/bottom-sheet`, `es-toolkit`, `polished` and
-`whatwg-url-without-unicode` removed. 
-
-### Reproducing it
+## Running it
 
 ```bash
-npx react-native bundle --platform ios --dev false --entry-file index.js \
-  --bundle-output /tmp/bloom.jsbundle --sourcemap-output /tmp/bloom.jsbundle.map \
-  --sourcemap-sources-root "$PWD"
-
-npx source-map-explorer /tmp/bloom.jsbundle /tmp/bloom.jsbundle.map --no-border-checks --html
+npm install
+npm run ios      # or: npm run android
 ```
 
-`--no-border-checks` is required. Without it `source-map-explorer` fails on React Native bundles
-with *"source map refers to generated column Infinity"*. `--sourcemap-sources-root` keeps the
-treemap rooted at the project instead of nesting it under the absolute path to it.
+Bloom needs API keys for Perenual, Pl@ntNet, DeepSeek and Unsplash — copy `.env.example` to `.env`
+and fill them in. Open-Meteo, which powers the weather feature, needs no key at all.
 
-The 40% is off the JavaScript bundle. The installed app also contains native libraries and assets,
-so its total size drops by less.
+```bash
+npm test             # 236 tests
+npm run lint
+npx tsc --noEmit
+```
 
+## Earlier work
 
-![Bundle before](docs/screenshots/perf-bundle-before.png)
-
-![Bundle after](docs/screenshots/perf-bundle-after.png)
+| Area | What it covers |
+|---|---|
+| Design system | ![Components](docs/screenshots/ui-plant-card.png) 22 components, each in its own folder |
+| Navigation | ![Navigation](docs/screenshots/nav-demo.gif) typed params, stack / tabs / drawer |
+| Plant identification | ![Identify](docs/screenshots/bloom%20-%20api%20-%20identify%20plant.gif) photo → Pl@ntNet → Perenual → generated care copy |
+| Favourites | ![Favourites](docs/screenshots/bloom%20-%20favs.gif) Redux, filtered by care difficulty |
+| Performance | ![Animation](docs/screenshots/perf-tabs-animation.gif) sliding indicators, memoised grids, smaller bundle |
