@@ -17,7 +17,9 @@ const PANEL_WIDTH = 327;
 // too much to be worth a request.
 const MIN_QUERY_LENGTH = 2;
 const SEARCH_DEBOUNCE_MS = 350;
-const RESULTS_TOP_GAP = spacing.xxl;
+// One gap value governs input -> heading and heading -> first result, so the two read as the
+// same step rather than as two coincidentally similar ones.
+const SECTION_GAP = spacing.xl;
 const MESSAGE_LINE_HEIGHT = 20;
 
 /** What a screen reader announces. Same-named cities are common, so the region and country
@@ -109,11 +111,9 @@ export function LocationSearchScreen({ navigation, route }: LocationSearchScreen
           />
         </View>
       )}
-      contentStyle={[
-        styles.content,
-        { paddingTop: RESULTS_TOP_GAP },
-      ]}
-      scrollableContent>
+      contentStyle={styles.content}
+      scrollableContent
+      stackedGap={SECTION_GAP}>
       <Pressable accessible={false} onPress={Keyboard.dismiss} style={styles.dismissArea}>
         <View style={styles.panel}>
           {hasError ? (
@@ -123,33 +123,37 @@ export function LocationSearchScreen({ navigation, route }: LocationSearchScreen
           ) : null}
           {!hasError && isSearching ? (
             <View accessibilityLabel="City suggestions" style={styles.results}>
-              <View style={styles.headingRow}>
-                <AppText variant="titleS">Suggestions</AppText>
-              </View>
-              {/* The previous results stay up while the next request is in flight, so the list
-                  does not blank on every keystroke; only a settled empty answer replaces it. */}
-              {results.length === 0 && !isLoading ? (
-                <AppText align="center" style={styles.message}>
-                  No cities match that search.
-                </AppText>
-              ) : null}
-              {results.map(location => {
-                const isCurrent = location.locationId === currentLocationId;
+              <AppText variant="titleS" style={styles.heading}>
+                Suggestions
+              </AppText>
+              {/* Wrapped so the section gap applies between the heading and the list as a
+                  whole, while the rows themselves stay adjacent as they are in the plant wiki. */}
+              <View style={styles.resultsList}>
+                {results.length === 0 && !isLoading ? (
+                  // The previous results stay up while the next request is in flight, so the list
+                  // does not blank on every keystroke; only a settled empty answer replaces it.
+                  <AppText align="center" style={styles.message}>
+                    No cities match that search.
+                  </AppText>
+                ) : null}
+                {results.map(location => {
+                  const isCurrent = location.locationId === currentLocationId;
 
-                return (
-                  <Pressable
-                    accessibilityLabel={describeLocation(location)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isCurrent }}
-                    key={location.locationId}
-                    onPress={() => handleSelect(location)}
-                    style={styles.resultRow}>
-                    <Icon color={colors.icon.primary} name="search" size="md" />
-                    <AppText>{location.name}</AppText>
-                    {isCurrent ? <Icon color={colors.icon.green} name="check" size="md" /> : null}
-                  </Pressable>
-                );
-              })}
+                  return (
+                    <Pressable
+                      accessibilityLabel={describeLocation(location)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isCurrent }}
+                      key={location.locationId}
+                      onPress={() => handleSelect(location)}
+                      style={styles.resultRow}>
+                      <Icon color={colors.icon.primary} name="search" size="md" />
+                      <AppText>{location.name}</AppText>
+                      {isCurrent ? <Icon color={colors.icon.green} name="check" size="md" /> : null}
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
           ) : null}
         </View>
@@ -168,9 +172,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
   },
-  headingRow: {
-    height: sizes.input.height,
-    justifyContent: 'center',
+  heading: {
     paddingHorizontal: spacing.md,
     width: '100%',
   },
@@ -192,6 +194,11 @@ const styles = StyleSheet.create({
   },
   results: {
     borderRadius: radii.lg,
+    // Separates the heading from the list. The rows inside the list are adjacent.
+    gap: SECTION_GAP,
+    width: '100%',
+  },
+  resultsList: {
     width: '100%',
   },
   searchWrap: {
