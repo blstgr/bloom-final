@@ -1446,6 +1446,28 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - react-native-geolocation (3.4.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - react-native-image-picker (8.2.1):
     - hermes-engine
     - RCTRequired
@@ -2248,6 +2270,7 @@ DEPENDENCIES:
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - React-mutationobservernativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/mutationobserver`)
   - "react-native-blur (from `../node_modules/@react-native-community/blur`)"
+  - "react-native-geolocation (from `../node_modules/@react-native-community/geolocation`)"
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
@@ -2376,6 +2399,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/mutationobserver"
   react-native-blur:
     :path: "../node_modules/@react-native-community/blur"
+  react-native-geolocation:
+    :path: "../node_modules/@react-native-community/geolocation"
   react-native-image-picker:
     :path: "../node_modules/react-native-image-picker"
   react-native-safe-area-context:
@@ -2505,6 +2530,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: ab33a818d339f5a1da308893c11b487be66121a8
   React-mutationobservernativemodule: a42d1626651ccd7d0dc02a56e69d4ec77c248893
   react-native-blur: ea6c78ddeaa7aa0fce36ea29d1f81dd23063032a
+  react-native-geolocation: c41d1ad8e832fa800b4e457c721e348bcc5aa147
   react-native-image-picker: 23540feacc79c63c60857f318fdfa8477c26e70a
   react-native-safe-area-context: fb5c8ee9f6dd62ef710611b3d370c501f42a4ac0
   React-NativeModulesApple: deba264b03bd79c6bd61014fa30e40321b5e443a

@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     opacity: opacities.disabled,
   },
   navigationValue: {
-    color: colors.text.placeholder,
+    color: colors.text.primary,
   },
   navigationValueGroup: {
     alignItems: 'center',

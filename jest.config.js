@@ -5,6 +5,7 @@ module.exports = {
   moduleNameMapper: {
     '\\.svg$': '<rootDir>/__mocks__/svgMock.js',
     '^@react-native-async-storage/async-storage$': '<rootDir>/__mocks__/asyncStorageMock.js',
+    '^@react-native-community/geolocation$': '<rootDir>/__mocks__/geolocationMock.js',
     '^@react-native-community/blur$': '<rootDir>/__mocks__/reactNativeBlurMock.js',
     '^react-native-image-picker$': '<rootDir>/__mocks__/reactNativeImagePickerMock.js',
     '^react-native-linear-gradient$': '<rootDir>/__mocks__/reactNativeLinearGradientMock.js',

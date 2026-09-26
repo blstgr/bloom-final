@@ -1,9 +1,16 @@
 import {
   OPEN_METEO_FORECAST_BASE_URL,
   OPEN_METEO_GEOCODING_BASE_URL,
+  REVERSE_GEOCODING_URL,
 } from './constants';
 import { readResponseBody, TOO_MANY_REQUESTS_STATUS } from './http';
-import type { GeoLocation, OpenMeteoForecastResponse, OpenMeteoGeocodingResponse, WeatherForecast } from './types';
+import type {
+  BigDataCloudReverseGeocodeResponse,
+  GeoLocation,
+  OpenMeteoForecastResponse,
+  OpenMeteoGeocodingResponse,
+  WeatherForecast,
+} from './types';
 
 export type WeatherApiErrorKind = 'network' | 'rate-limited' | 'unknown';
 
@@ -74,6 +81,47 @@ export async function searchLocations(name: string): Promise<GeoLocation[]> {
     name: result.name,
     timezone: result.timezone,
   }));
+}
+
+/**
+ * Coordinates to a place, for a location the device reported rather than one the user typed.
+ *
+ * Open-Meteo's geocoder is forward-only, so this is the one thing it cannot answer. The name is
+ * needed purely to show the user where the forecast is for — the forecast itself only ever needs
+ * the coordinates, which is why a failure here still yields a usable location.
+ */
+export async function reverseGeocode(latitude: number, longitude: number): Promise<GeoLocation> {
+  const fallback: GeoLocation = {
+    country: '',
+    latitude,
+    locationId: `${latitude},${longitude}`,
+    longitude,
+    name: 'Current location',
+    timezone: '',
+  };
+
+  try {
+    const response = await fetchOpenMeteo<BigDataCloudReverseGeocodeResponse>(
+      `${REVERSE_GEOCODING_URL}?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
+    );
+    const name = response.city ?? response.locality;
+
+    return name
+      ? {
+          admin1: response.principalSubdivision,
+          country: response.countryName ?? '',
+          latitude,
+          locationId: `${latitude},${longitude}`,
+          longitude,
+          name,
+          timezone: '',
+        }
+      : fallback;
+  } catch {
+    // The coordinates are the part that matters; a nameless location still produces the right
+    // forecast, and the settings row can say "Current location" rather than nothing.
+    return fallback;
+  }
 }
 
 /**

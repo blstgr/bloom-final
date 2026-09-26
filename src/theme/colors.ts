@@ -16,6 +16,10 @@ export const colors = {
     primary:     palette.dark,
     highlighted: palette.green,   // bodyHighlight variant
     placeholder: palette.mist,
+    /** Body colour at 60%. What a placeholder or a secondary value reads as against the cream
+     * surfaces — `mist` is a cool green-grey that sits wrong next to warm text, and the green
+     * `highlighted` reads as a link. */
+    muted: 'rgba(46, 43, 40, 0.6)',
     inverse:     palette.white,
   },
   brand: {

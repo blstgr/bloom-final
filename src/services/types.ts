@@ -149,3 +149,11 @@ export type OpenMeteoForecastResponse = {
   longitude: number;
   timezone: string;
 };
+
+export type BigDataCloudReverseGeocodeResponse = {
+  /** Absent over open water and in some sparsely-mapped areas. */
+  city?: string;
+  countryName?: string;
+  locality?: string;
+  principalSubdivision?: string;
+};

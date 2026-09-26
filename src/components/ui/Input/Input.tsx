@@ -120,7 +120,7 @@ export function Input({
               onFocus?.();
             }}
             placeholder={placeholder}
-            placeholderTextColor={disabled ? colors.action.disabled : colors.text.highlighted}
+            placeholderTextColor={disabled ? colors.action.disabled : colors.text.muted}
             secureTextEntry={type === 'password'}
             style={[
               styles.input,

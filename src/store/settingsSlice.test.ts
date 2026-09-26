@@ -78,17 +78,17 @@ describe('settingsSlice', () => {
     expect(frozen.selectedLocation).toEqual(kyiv);
   });
 
-  it('does not overwrite a city the user chose themselves', () => {
+  it('freezes the city currently showing, not one searched for earlier', () => {
+    // London was chosen at some point; detection was then switched back on and found Kyiv.
+    // Switching off again must keep Kyiv — what is on screen — rather than resurrect London.
     const chosen = settingsReducer(
       buildState({ detectedLocation: kyiv }),
       setSelectedLocation(london),
     );
-    const toggled = settingsReducer(
-      settingsReducer(chosen, setAutoDetectLocation(true)),
-      setAutoDetectLocation(false),
-    );
+    const redetecting = settingsReducer(chosen, setAutoDetectLocation(true));
+    const frozen = settingsReducer(redetecting, setAutoDetectLocation(false));
 
-    expect(toggled.selectedLocation).toEqual(london);
+    expect(frozen.selectedLocation).toEqual(kyiv);
   });
 
   it('keeps the chosen city when detection is switched back on', () => {

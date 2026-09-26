@@ -10,7 +10,7 @@ import {
   setDetectedLocation,
 } from '../../store/settingsSlice';
 
-import { detectDeviceLocation, getDeviceTimeZoneCity } from './deviceLocation';
+import { detectDeviceLocation } from './deviceLocation';
 
 const ONE_HOUR_MS = 3_600_000;
 
@@ -53,7 +53,6 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
   const isEnabled = useAppSelector(selectWeatherAdjustmentEnabled);
   const isHydrated = useAppSelector(selectIsSettingsHydrated);
   const autoDetectLocation = useAppSelector(state => state.settings.autoDetectLocation);
-  const detectedLocation = useAppSelector(state => state.settings.detectedLocation);
 
   const [forecast, setForecast] = React.useState<WeatherForecast | null>(null);
   const [error, setError] = React.useState<WeatherFailureReason | null>(null);
@@ -78,12 +77,19 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
   // without this the provider would act on defaults — fetching a forecast for a user who had
   // turned the feature off, and re-detecting a location already sitting on disk.
   //
-  // Re-detects when the device's timezone no longer matches the stored city, rather than only
-  // when there is no city at all: a persisted `detectedLocation` would otherwise pin someone to
-  // the place they first opened the app, while the switch still claimed to be detecting.
-  const deviceCity = getDeviceTimeZoneCity();
+  // Once per launch while detection is on, rather than only when no city is stored: a persisted
+  // `detectedLocation` would otherwise pin someone to wherever they first opened the app, while
+  // the switch still claimed to be detecting. Deliberately not a comparison against the stored
+  // city — the device's position is the thing being asked for, and comparing names would mean
+  // re-asking on every render whenever the two disagreed, which is exactly when they differ.
   const shouldDetect =
-    isHydrated && isEnabled && autoDetectLocation && detectedLocation?.name !== deviceCity;
+    isHydrated && isEnabled && autoDetectLocation && !hasAttemptedDetection;
+
+  // Switching detection off arms it to run again on the way back on, so a user who travels can
+  // re-detect without relaunching.
+  React.useEffect(() => {
+    if (!autoDetectLocation) setHasAttemptedDetection(false);
+  }, [autoDetectLocation]);
 
   React.useEffect(() => {
     if (!shouldDetect) return undefined;

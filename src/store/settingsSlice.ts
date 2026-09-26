@@ -12,9 +12,9 @@ export type SettingsState = {
   /** When on, the location comes from the device's timezone rather than a chosen city. */
   autoDetectLocation: boolean;
   detectedLocation: GeoLocation | null;
-  /** Only consulted while `autoDetectLocation` is off. Seeded from `detectedLocation` the first
-   * time detection is switched off, and kept rather than cleared when it is switched back on, so
-   * turning it off again restores the user's own choice. */
+  /** Only consulted while `autoDetectLocation` is off, and re-seeded from `detectedLocation`
+   * every time detection is switched off — so turning it off always freezes the city that was
+   * showing, never one searched for in an earlier session. */
   selectedLocation: GeoLocation | null;
   weatherAdjustmentEnabled: boolean;
 };
@@ -42,10 +42,12 @@ const settingsSlice = createSlice({
     },
     setAutoDetectLocation: (state, action: PayloadAction<boolean>) => {
       state.autoDetectLocation = action.payload;
-      // Switching detection off keeps the location you already had rather than blanking it: the
-      // city was right a moment ago, and the switch means "stop updating this", not "forget it".
-      // Only seeds the first time, so it never overwrites a city the user chose themselves.
-      if (!action.payload && !state.selectedLocation) {
+      // Switching detection off keeps the city that was on screen a moment ago. It takes the
+      // detected one each time rather than only the first, because the alternative surfaces a
+      // city the user searched for once, long ago: detect on (Kyiv) -> off would show London
+      // because London was typed in last week. "Stop updating this" should freeze what is
+      // showing, not resurrect history.
+      if (!action.payload && state.detectedLocation) {
         state.selectedLocation = state.detectedLocation;
       }
     },

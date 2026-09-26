@@ -6,6 +6,10 @@ export const UNSPLASH_BASE_URL = 'https://api.unsplash.com';
 // config.ts. Forecast and geocoding live on separate hosts.
 export const OPEN_METEO_FORECAST_BASE_URL = 'https://api.open-meteo.com/v1';
 export const OPEN_METEO_GEOCODING_BASE_URL = 'https://geocoding-api.open-meteo.com/v1';
+// Open-Meteo's geocoder only goes name -> coordinates. Device location arrives as coordinates and
+// still needs a city name to show, so reverse lookups go to BigDataCloud's keyless client
+// endpoint. It rate-limits rapid bursts, which is fine: this is called once per location change.
+export const REVERSE_GEOCODING_URL = 'https://api-bdc.net/data/reverse-geocode-client';
 
 // Perenual's own "upgrade to see this image" placeholder — never shown to users as if it were a
 // real species photo.

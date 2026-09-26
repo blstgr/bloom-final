@@ -244,7 +244,61 @@ export const mockSpecies: PlantSpecies[] = [
   },
 ];
 
-export const initialOwnedPlants: OwnedPlant[] = [];
+/**
+ * Plants a first-time user starts with, so the app has something to show before they add
+ * anything — and so the weather adjustment is visible at all.
+ *
+ * Last-watered dates are relative to launch rather than fixed, because a hard-coded date drifts
+ * into "wildly overdue" within a week of writing it. The offsets are chosen against each
+ * species' own interval so the set straddles the due line: one comfortably watered, one right on
+ * the boundary, one overdue. Turning the weather switch on and off visibly moves the boundary
+ * ones between the Water screen and the "Hydrated" state.
+ */
+function daysAgo(days: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+
+  return date.toISOString();
+}
+
+export const initialOwnedPlants: OwnedPlant[] = [
+  {
+    addedAt: daysAgo(40),
+    customName: 'Kevin',
+    image: zzPlant,
+    ownedPlantId: 'owned-plant-0',
+    // 14-day interval, watered 13 days ago: not due today, but due if the weather shortens it.
+    speciesId: 'zz-plant',
+    wateringHistory: [daysAgo(27), daysAgo(13)],
+  },
+  {
+    addedAt: daysAgo(30),
+    customName: 'Big Steve',
+    image: monsteraFull,
+    ownedPlantId: 'owned-plant-1',
+    // 10-day interval, watered 11 days ago: already due, and stays due either way.
+    speciesId: 'monstera-deliciosa',
+    wateringHistory: [daysAgo(21), daysAgo(11)],
+  },
+  {
+    addedAt: daysAgo(20),
+    customName: 'The Optimist',
+    image: prayerPlant,
+    ownedPlantId: 'owned-plant-2',
+    // 6-day interval, watered 5 days ago: the most sensitive to a shift, being the shortest.
+    speciesId: 'prayer-plant',
+    wateringHistory: [daysAgo(11), daysAgo(5)],
+  },
+  {
+    addedAt: daysAgo(12),
+    customName: 'Mildred',
+    image: parlorPalm,
+    ownedPlantId: 'owned-plant-3',
+    // 12-day interval, watered yesterday: comfortably not due, so the list is never all-due.
+    speciesId: 'parlor-palm',
+    wateringHistory: [daysAgo(1)],
+  },
+];
 
 export function getSpeciesById(speciesId: string | undefined) {
   return mockSpecies.find(species => species.speciesId === speciesId);

@@ -1,5 +1,42 @@
+import Geolocation from '@react-native-community/geolocation';
+
 import type { GeoLocation } from '../../services/types';
-import { searchLocations } from '../../services/weatherApi';
+import { reverseGeocode, searchLocations } from '../../services/weatherApi';
+
+// Coarse is all the feature can use — a forecast resolves to a weather grid — and a cached fix
+// avoids waking the GPS chip for something that does not need street-level accuracy.
+const TEN_MINUTES_MS = 600_000;
+const POSITION_TIMEOUT_MS = 15_000;
+const POSITION_OPTIONS = {
+  enableHighAccuracy: false,
+  maximumAge: TEN_MINUTES_MS,
+  timeout: POSITION_TIMEOUT_MS,
+} as const;
+
+// "When in use" only: Bloom has nothing to do with your location while it is closed, and asking
+// for "always" would be a larger permission than the feature could justify.
+Geolocation.setRNConfiguration({
+  authorizationLevel: 'whenInUse',
+  enableBackgroundLocationUpdates: false,
+  locationProvider: 'auto',
+  skipPermissionRequests: false,
+});
+
+function requestAuthorization(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    Geolocation.requestAuthorization(resolve, reject);
+  });
+}
+
+function getCurrentPosition(): Promise<GeolocationPositionLike> {
+  return new Promise((resolve, reject) => {
+    Geolocation.getCurrentPosition(resolve, reject, POSITION_OPTIONS);
+  });
+}
+
+type GeolocationPositionLike = {
+  coords: { latitude: number; longitude: number };
+};
 
 /**
  * Zones IANA has renamed, mapped to the current city name.
@@ -51,12 +88,13 @@ export function getDeviceTimeZoneCity(): string | null {
 }
 
 /**
- * Resolve the device's timezone to coordinates, or null if it cannot be resolved.
+ * The time zone's namesake city, resolved to coordinates.
  *
- * Geocoding the city name rather than shipping a zone-to-coordinate table means detection and a
- * manual city choice go through exactly one code path.
+ * A fallback, not the primary path: a zone is a region, not a point. `Europe/Kyiv` covers all of
+ * Ukraine, so this puts everyone in that zone in Kyiv — right country, arbitrary city. Good
+ * enough to seed a guess someone can correct, not good enough to be the answer.
  */
-export async function detectDeviceLocation(): Promise<GeoLocation | null> {
+export async function detectLocationFromTimeZone(): Promise<GeoLocation | null> {
   const city = getDeviceTimeZoneCity();
   if (!city) return null;
 
@@ -69,4 +107,25 @@ export async function detectDeviceLocation(): Promise<GeoLocation | null> {
   // "Europe/Kyiv" returns a place named "Kiev" -- and showing a user a different name for their
   // own city than their phone uses reads as a bug, not as data provenance.
   return { ...match, name: city };
+}
+
+/**
+ * Where the device actually is, falling back to its time zone.
+ *
+ * The forecast needs a point and a time zone only gives a region, so GPS is the primary source.
+ * Permission refusal is not an error state here: the user has said no to one way of answering the
+ * question, and the time-zone guess is still better than nothing — with the city picker available
+ * for anyone the guess gets wrong.
+ */
+export async function detectDeviceLocation(): Promise<GeoLocation | null> {
+  try {
+    // Asked for explicitly rather than left to the first position request, so the prompt appears
+    // at a moment tied to the setting the user just looked at.
+    await requestAuthorization();
+    const position = await getCurrentPosition();
+
+    return await reverseGeocode(position.coords.latitude, position.coords.longitude);
+  } catch {
+    return detectLocationFromTimeZone();
+  }
 }
