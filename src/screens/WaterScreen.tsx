@@ -1,18 +1,16 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { AppText } from '../components/ui/AppText';
-import { Icon } from '../components/ui/Icon';
+import { EmptyState } from '../components/ui/EmptyState';
 import { ScreenLayout } from '../components/ui/ScreenLayout';
 import { TopActions } from '../components/ui/TopActions';
 import { usePlantData } from '../features/plants/data/PlantDataProvider';
 import { buildPlantSchedule, getScheduleBaseDate, isWateringDue } from '../features/plants/data/schedule';
 import { WateringCard } from '../features/watering/components/WateringCard';
 import { type WaterScreenProps, useTabScreenNavigation } from '../navigation';
-import { colors, layout, spacing } from '../theme';
+import { layout, spacing } from '../theme';
 
 const FIRST_SCHEDULE_ITEM_INDEX = 0;
-const EMPTY_SUBTITLE_LINE_HEIGHT = 20;
 const WATERING_CARD_GAP = 4;
 
 export function WaterScreen({ navigation }: WaterScreenProps) {
@@ -73,13 +71,11 @@ export function WaterScreen({ navigation }: WaterScreenProps) {
             })}
           </View>
         ) : (
-          <View style={styles.emptyState}>
-            <Icon color={colors.icon.green} name="dropHappy" size="xxl" />
-            <AppText align="center" variant="titleXl">Hydrated</AppText>
-            <AppText align="center" style={styles.emptySubtitle}>
-              No watering tasks today
-            </AppText>
-          </View>
+          <EmptyState
+            icon="dropHappy"
+            subtitle="No watering tasks today"
+            title="Hydrated"
+          />
         )}
     </ScreenLayout>
   );
@@ -90,16 +86,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     gap: spacing.md,
     paddingHorizontal: layout.screenPadding,
-  },
-  emptyState: {
-    alignItems: 'center',
-    flexGrow: 1,
-    gap: spacing.md,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-  emptySubtitle: {
-    lineHeight: EMPTY_SUBTITLE_LINE_HEIGHT,
   },
   notificationState: {
     gap: WATERING_CARD_GAP,

@@ -1,6 +1,18 @@
+import { searchSpecies } from '../../../services/plantApi';
 import type { PerenualSpeciesListItem } from '../../../services/types';
 
-import { rankByRelevance } from './speciesSearch';
+
+import {
+  clearSpeciesSearchCache,
+  mergeSearchResults,
+  rankByRelevance,
+  searchSeedSpecies,
+  searchSpeciesByRelevance,
+} from './speciesSearch';
+
+jest.mock('../../../services/plantApi');
+
+const mockedSearchSpecies = searchSpecies as jest.MockedFunction<typeof searchSpecies>;
 
 function buildItem(overrides: Partial<PerenualSpeciesListItem> = {}): PerenualSpeciesListItem {
   return {
@@ -54,5 +66,92 @@ describe('rankByRelevance', () => {
     // name relevance — should not match at all.
     const item = buildItem({ common_name: 'Japanese Maple', scientific_name: ['Acer palmatum'] });
     expect(rankByRelevance(item, 'pa')).toBeNull();
+  });
+});
+
+describe('searchSeedSpecies', () => {
+  it('matches a seed species by prefix', () => {
+    expect(searchSeedSpecies('zz')).toEqual([
+      { speciesId: 'zz-plant', speciesName: 'ZZ plant' },
+    ]);
+  });
+
+  it('matches every seed species sharing a prefix', () => {
+    const names = searchSeedSpecies('zebra').map(result => result.speciesName);
+    expect(names).toEqual(expect.arrayContaining(['Zebra Haworthia', 'Zebra Cactus']));
+  });
+
+  it('matches a word that starts later in the name', () => {
+    const names = searchSeedSpecies('palm').map(result => result.speciesName);
+    expect(names).toContain('Parlor Palm');
+  });
+
+  it('returns nothing for a blank query', () => {
+    expect(searchSeedSpecies('   ')).toEqual([]);
+  });
+
+  it('returns nothing when no seed species matches', () => {
+    expect(searchSeedSpecies('fiddle leaf fig')).toEqual([]);
+  });
+});
+
+describe('mergeSearchResults', () => {
+  const seed = [{ speciesId: 'zz-plant', speciesName: 'ZZ plant' }];
+
+  it('keeps seed results first', () => {
+    const merged = mergeSearchResults(seed, [
+      { speciesId: '404', speciesName: 'Zamioculcas' },
+    ]);
+    expect(merged.map(result => result.speciesId)).toEqual(['zz-plant', '404']);
+  });
+
+  it('drops a remote duplicate of a seed species', () => {
+    // The same plant carries a seed slug locally and a Perenual number remotely, so the ids can
+    // never match even though the rows are the same plant — dedup has to be by name.
+    const merged = mergeSearchResults(seed, [
+      { speciesId: '501', speciesName: 'zz plant' },
+    ]);
+    expect(merged).toEqual(seed);
+  });
+
+  it('returns remote results unchanged when there are no seed matches', () => {
+    const remote = [{ speciesId: '501', speciesName: 'Fiddle Leaf Fig' }];
+    expect(mergeSearchResults([], remote)).toEqual(remote);
+  });
+});
+
+describe('searchSpeciesByRelevance', () => {
+  beforeEach(() => {
+    clearSpeciesSearchCache();
+    mockedSearchSpecies.mockReset();
+  });
+
+  it('normalizes the query before ranking and before calling the API', async () => {
+    mockedSearchSpecies.mockResolvedValue([buildItem({ common_name: 'Parlor Palm', id: 7 })]);
+
+    // Untrimmed and uppercased: rankByRelevance assumes normalized input, so without
+    // normalization here 'Parlor Palm' would fail to match its own name.
+    await expect(searchSpeciesByRelevance('  PARLOR  ')).resolves.toEqual([
+      { speciesId: '7', speciesName: 'Parlor Palm' },
+    ]);
+    expect(mockedSearchSpecies).toHaveBeenCalledWith('parlor');
+  });
+
+  it('serves a repeated query from the cache without calling the API again', async () => {
+    mockedSearchSpecies.mockResolvedValue([buildItem({ common_name: 'Parlor Palm', id: 7 })]);
+
+    await searchSpeciesByRelevance('parlor');
+    await searchSpeciesByRelevance('parlor');
+
+    expect(mockedSearchSpecies).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats differently-spelled forms of one query as the same cache entry', async () => {
+    mockedSearchSpecies.mockResolvedValue([buildItem({ common_name: 'Parlor Palm', id: 7 })]);
+
+    await searchSpeciesByRelevance('parlor');
+    await searchSpeciesByRelevance('  Parlor ');
+
+    expect(mockedSearchSpecies).toHaveBeenCalledTimes(1);
   });
 });

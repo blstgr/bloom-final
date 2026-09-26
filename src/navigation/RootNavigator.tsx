@@ -21,7 +21,9 @@ export function RootNavigator() {
     <StoreProvider store={store}>
       <PlantDataProvider>
         <NavigationContainer>
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Navigator
+            // Explicit rather than per-platform default, so Android matches iOS's slide.
+            screenOptions={{ animation: 'slide_from_right', headerShown: false }}>
             <Stack.Screen component={AuthStartScreen} name={SCREENS.AUTH_START} />
             <Stack.Screen
               component={SettingsDrawerNavigator}

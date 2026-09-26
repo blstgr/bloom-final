@@ -51,6 +51,9 @@ const Reanimated = {
   runOnJS: callback => callback,
   scrollTo: () => undefined,
   useAnimatedGestureHandler: handlers => handlers,
+  // Tests run with the keyboard closed, which is the resting layout every assertion is
+  // written against; the open state is a device-only concern.
+  useAnimatedKeyboard: () => ({ height: { value: 0 }, state: { value: 0 } }),
   useAnimatedProps: updater => updater(),
   useAnimatedReaction: () => undefined,
   useAnimatedRef: () => React.createRef(),

@@ -35,6 +35,11 @@ export function TabNavigator() {
       // https://github.com/software-mansion/react-native-screens/issues/1342
       detachInactiveScreens={false}
       screenOptions={{
+        // bottom-tabs v7 defaults to 'none', so switching tabs cut instantly while the
+        // FloatingTabBar pill glided. 'fade' rather than 'shift': the bar is absolutely
+        // positioned and rendered once by the navigator, so sliding screens horizontally
+        // beneath a stationary bar reads as a glitch.
+        animation: 'fade',
         headerShown: false,
       }}
       tabBar={renderFloatingTabBar}>

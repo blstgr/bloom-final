@@ -1,17 +1,14 @@
 import React from 'react';
-import { StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { StyleSheet, type ImageSourcePropType } from 'react-native';
 
-import { AppText } from '../components/ui/AppText';
-import { Icon } from '../components/ui/Icon';
+import { EmptyState } from '../components/ui/EmptyState';
 import { PhotoGrid } from '../components/ui/PhotoGrid';
 import { PlantCard } from '../components/ui/PlantCard';
 import { ScreenLayout } from '../components/ui/ScreenLayout';
 import { TopActions } from '../components/ui/TopActions';
 import { usePlantData } from '../features/plants/data/PlantDataProvider';
 import { type HomeScreenProps, useTabScreenNavigation } from '../navigation';
-import { colors, layout, spacing } from '../theme';
-
-const EMPTY_SUBTITLE_LINE_HEIGHT = 20;
+import { layout, spacing } from '../theme';
 
 type HomePlantGridItemProps = {
   customName: string;
@@ -101,15 +98,11 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
             ))}
           </PhotoGrid>
         ) : (
-          <View style={styles.emptyState}>
-            <Icon color={colors.icon.green} name="plant" size="xxl" />
-            <AppText align="center" variant="titleXl">
-              Keep something alive this week
-            </AppText>
-            <AppText align="center" style={styles.emptySubtitle}>
-              Add a plant to create a watering schedule
-            </AppText>
-          </View>
+          <EmptyState
+            icon="plant"
+            subtitle="Add a plant to create a watering schedule"
+            title="Keep something alive this week"
+          />
         )}
     </ScreenLayout>
   );
@@ -120,15 +113,5 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     gap: spacing.md,
     paddingHorizontal: layout.screenPadding,
-  },
-  emptyState: {
-    alignItems: 'center',
-    flexGrow: 1,
-    gap: spacing.md,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-  emptySubtitle: {
-    lineHeight: EMPTY_SUBTITLE_LINE_HEIGHT,
   },
 });

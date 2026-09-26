@@ -298,28 +298,57 @@ test('the tab bar marks the active tab selected', async () => {
   ).toBe(true);
 });
 
+test('a seed species match lists and opens without waiting for Perenual', async () => {
+  const rootNavigate = jest.fn();
+  let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+  // Deliberately never resolves: a seed match must not depend on the network call completing.
+  mockedSearchSpecies.mockReturnValueOnce(new Promise(() => {}));
+
+  await ReactTestRenderer.act(() => {
+    renderer = ReactTestRenderer.create(
+      renderWithProviders(<LibraryScreen {...createLibraryProps(rootNavigate)} />),
+    );
+  });
+
+  await ReactTestRenderer.act(() => {
+    renderer?.root.findByProps({ accessibilityLabel: 'Search plant wiki' }).props.onChangeText('Zebra Haworthia');
+  });
+
+  await ReactTestRenderer.act(() => {
+    renderer?.root.findByProps({ accessibilityLabel: 'Open Zebra Haworthia' }).props.onPress();
+  });
+
+  // The seed slug, not a Perenual number: SpeciesInfoScreen resolves it through getSpeciesById
+  // before it ever reaches the network.
+  expect(rootNavigate).toHaveBeenCalledWith(SCREENS.SPECIES_INFO, {
+    speciesId: 'zebra-haworthia',
+    speciesName: 'Zebra Haworthia',
+  });
+});
+
 test('navigates from library search result to species info with species id', async () => {
   const rootNavigate = jest.fn();
   let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
   mockedSearchSpecies.mockResolvedValueOnce([
     {
-      common_name: 'Zebra Haworthia',
+      common_name: 'Fiddle Leaf Fig',
       default_image: null,
       id: 501,
-      scientific_name: ['Haworthiopsis attenuata'],
+      scientific_name: ['Ficus lyrata'],
     },
   ]);
   mockedGetSpeciesDetails.mockResolvedValueOnce({
     care_level: 'Easy',
-    common_name: 'Zebra Haworthia',
+    common_name: 'Fiddle Leaf Fig',
     default_image: null,
     dimensions: null,
     growth_rate: 'Low',
     id: 501,
     poisonous_to_humans: false,
     poisonous_to_pets: false,
-    scientific_name: ['Haworthiopsis attenuata'],
+    scientific_name: ['Ficus lyrata'],
     sunlight: null,
     watering_general_benchmark: { unit: 'days', value: '14' },
   });
@@ -336,7 +365,7 @@ test('navigates from library search result to species info with species id', asy
   });
 
   await ReactTestRenderer.act(() => {
-    renderer?.root.findByProps({ accessibilityLabel: 'Search plant wiki' }).props.onChangeText('Zebra Haworthia');
+    renderer?.root.findByProps({ accessibilityLabel: 'Search plant wiki' }).props.onChangeText('Fiddle Leaf Fig');
   });
 
   // A separate act() call: the one above must return (flushing the state update and the effect
@@ -347,7 +376,7 @@ test('navigates from library search result to species info with species id', asy
   });
 
   await ReactTestRenderer.act(() => {
-    renderer?.root.findByProps({ accessibilityLabel: 'Open Zebra Haworthia' }).props.onPress();
+    renderer?.root.findByProps({ accessibilityLabel: 'Open Fiddle Leaf Fig' }).props.onPress();
   });
 
   // Flushes the tap handler's own getSpeciesDetails -> generateSpeciesCopy promise chain.
@@ -357,7 +386,7 @@ test('navigates from library search result to species info with species id', asy
 
   expect(rootNavigate).toHaveBeenCalledWith(SCREENS.SPECIES_INFO, {
     speciesId: '501',
-    speciesName: 'Zebra Haworthia',
+    speciesName: 'Fiddle Leaf Fig',
   });
 });
 

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { gradients, layout, sizes, spacing } from '../../../theme';
 
-const FLOATING_BOTTOM_ACTION_RESERVED_HEIGHT = sizes.nav.item;
+export const FLOATING_BOTTOM_ACTION_RESERVED_HEIGHT = sizes.nav.item;
 /**
  * Breathing room between the last scrollable item and the floating bar above it.
  *
