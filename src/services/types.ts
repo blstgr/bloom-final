@@ -108,8 +108,9 @@ export type GeoLocation = {
 export type DailyWeather = {
   /** ISO yyyy-mm-dd, in the location's own timezone. */
   date: string;
-  /** FAO reference evapotranspiration, mm/day — how fast water leaves soil. */
-  et0: number;
+  /** FAO reference evapotranspiration, mm/day — how fast water leaves soil. Null at grid points
+   * where Open-Meteo has no value; callers must drop those rather than average them in. */
+  et0: number | null;
   humidityMean: number;
   precipitation: number;
   temperatureMax: number;
@@ -138,7 +139,7 @@ export type OpenMeteoGeocodingResponse = {
 
 export type OpenMeteoForecastResponse = {
   daily: {
-    et0_fao_evapotranspiration: number[];
+    et0_fao_evapotranspiration: Array<number | null>;
     precipitation_sum: number[];
     relative_humidity_2m_mean: number[];
     temperature_2m_max: number[];

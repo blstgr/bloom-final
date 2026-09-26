@@ -31,6 +31,9 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+/** Describes the interval the caller actually gets, not the raw ratio. A factor of 0.93 that
+ * rounds back to the same number of days has changed nothing, and saying "drier than usual" about
+ * an unchanged schedule would be a claim the UI cannot back up. */
 function getReason(effectiveIntervalDays: number, baseIntervalDays: number): WateringAdjustmentReason {
   if (effectiveIntervalDays < baseIntervalDays) return 'drier-than-usual';
   if (effectiveIntervalDays > baseIntervalDays) return 'wetter-than-usual';
@@ -54,7 +57,10 @@ export function getWateringAdjustment(
   baseIntervalDays: number,
   forecast: WeatherForecast | null,
 ): WateringAdjustment {
-  const readings = forecast?.days.map(day => day.et0).filter(et0 => Number.isFinite(et0)) ?? [];
+  const readings =
+    forecast?.days
+      .map(day => day.et0)
+      .filter((et0): et0 is number => et0 != null && Number.isFinite(et0)) ?? [];
   if (readings.length === 0) {
     return { effectiveIntervalDays: baseIntervalDays, factor: 1, reason: 'unchanged' };
   }

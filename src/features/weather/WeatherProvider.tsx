@@ -5,11 +5,12 @@ import { getForecast, WeatherApiError } from '../../services/weatherApi';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectActiveLocation,
+  selectIsSettingsHydrated,
   selectWeatherAdjustmentEnabled,
   setDetectedLocation,
 } from '../../store/settingsSlice';
 
-import { detectDeviceLocation } from './deviceLocation';
+import { detectDeviceLocation, getDeviceTimeZoneCity } from './deviceLocation';
 
 const ONE_HOUR_MS = 3_600_000;
 
@@ -18,6 +19,9 @@ export type WeatherFailureReason = 'network' | 'rate-limited' | 'unknown';
 export type WeatherContextValue = {
   error: WeatherFailureReason | null;
   forecast: WeatherForecast | null;
+  /** True once detection has run to a conclusion, whether or not it found a city. Lets the
+   * settings row stop saying "Detecting..." when there is nothing more to wait for. */
+  hasAttemptedDetection: boolean;
   isLoading: boolean;
   refresh: () => void;
 };
@@ -47,34 +51,56 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
   const dispatch = useAppDispatch();
   const activeLocation = useAppSelector(selectActiveLocation);
   const isEnabled = useAppSelector(selectWeatherAdjustmentEnabled);
+  const isHydrated = useAppSelector(selectIsSettingsHydrated);
+  const autoDetectLocation = useAppSelector(state => state.settings.autoDetectLocation);
+  const detectedLocation = useAppSelector(state => state.settings.detectedLocation);
 
   const [forecast, setForecast] = React.useState<WeatherForecast | null>(null);
   const [error, setError] = React.useState<WeatherFailureReason | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [refreshToken, setRefreshToken] = React.useState(0);
+  // Distinguishes "still looking" from "looked and found nothing", which a null location alone
+  // cannot express — without it a failed detection shows a progress state forever.
+  const [hasAttemptedDetection, setHasAttemptedDetection] = React.useState(false);
 
   const cacheRef = React.useRef(new Map<string, WeatherForecast>());
   const inFlightRef = React.useRef(new Map<string, Promise<WeatherForecast>>());
 
   const refresh = React.useCallback(() => {
     cacheRef.current.clear();
+    // Also drop anything outstanding: keeping it would make the refresh adopt the very promise
+    // it was asked to supersede, which is the one case the dedup map exists to handle.
+    inFlightRef.current.clear();
     setRefreshToken(token => token + 1);
   }, []);
 
-  // Detection runs once, and only while it is the thing deciding the location. A user who has
-  // chosen a city is not waiting on the device's timezone.
-  const shouldDetect = isEnabled && activeLocation == null;
+  // Nothing runs until the saved settings are back. Child effects fire before parent ones, so
+  // without this the provider would act on defaults — fetching a forecast for a user who had
+  // turned the feature off, and re-detecting a location already sitting on disk.
+  //
+  // Re-detects when the device's timezone no longer matches the stored city, rather than only
+  // when there is no city at all: a persisted `detectedLocation` would otherwise pin someone to
+  // the place they first opened the app, while the switch still claimed to be detecting.
+  const deviceCity = getDeviceTimeZoneCity();
+  const shouldDetect =
+    isHydrated && isEnabled && autoDetectLocation && detectedLocation?.name !== deviceCity;
+
   React.useEffect(() => {
     if (!shouldDetect) return undefined;
 
     let cancelled = false;
     detectDeviceLocation()
       .then(detected => {
-        if (!cancelled && detected) dispatch(setDetectedLocation(detected));
+        if (cancelled) return;
+        // Recorded either way. `null` is a resolved answer — "the device names no city we can
+        // place" — and the settings row needs to tell that apart from still looking.
+        dispatch(setDetectedLocation(detected));
       })
       .catch(() => {
-        // Leaves the location unresolved, which the settings screen renders as such. There is no
-        // useful fallback: a guessed city would silently shift the user's watering schedule.
+        if (!cancelled) dispatch(setDetectedLocation(null));
+      })
+      .finally(() => {
+        if (!cancelled) setHasAttemptedDetection(true);
       });
 
     return () => {
@@ -83,7 +109,7 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
   }, [dispatch, shouldDetect]);
 
   React.useEffect(() => {
-    if (!isEnabled || !activeLocation) {
+    if (!isHydrated || !isEnabled || !activeLocation) {
       setForecast(null);
       setError(null);
       setIsLoading(false);
@@ -104,7 +130,8 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     setIsLoading(true);
 
-    // Two screens mounting at once must not become two requests for the same place.
+    // Coalesces a location that flips away and back while a fetch is outstanding (A -> B -> A)
+  // onto the request already running, rather than starting a second one for the same place.
     const pending =
       inFlightRef.current.get(cacheKey) ??
       getForecast(activeLocation.latitude, activeLocation.longitude);
@@ -130,11 +157,11 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [activeLocation, isEnabled, refreshToken]);
+  }, [activeLocation, isEnabled, isHydrated, refreshToken]);
 
   const value = React.useMemo<WeatherContextValue>(
-    () => ({ error, forecast, isLoading, refresh }),
-    [error, forecast, isLoading, refresh],
+    () => ({ error, forecast, hasAttemptedDetection, isLoading, refresh }),
+    [error, forecast, hasAttemptedDetection, isLoading, refresh],
   );
 
   return <WeatherContext.Provider value={value}>{children}</WeatherContext.Provider>;

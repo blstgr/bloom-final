@@ -22,7 +22,9 @@ export async function hydrateStore(): Promise<void> {
   const persisted = await loadPersistedState();
 
   if (persisted.favorites) store.dispatch(hydrateFavorites(persisted.favorites));
-  if (persisted.settings) store.dispatch(hydrateSettings(persisted.settings));
+  // Dispatched even when nothing was saved: a first run has no settings to restore but still has
+  // to announce that the read finished, or consumers wait forever for state that will never come.
+  store.dispatch(hydrateSettings(persisted.settings ?? {}));
 }
 
 export type RootState = ReturnType<typeof store.getState>;

@@ -522,8 +522,10 @@ export function PlantDataProvider({
     loadOwnedPlants()
       .then(stored => {
         if (cancelled || !stored) return;
-        setOwnedPlants(stored);
-        ownedPlantsRef.current = stored;
+        // Through the same write path as every other change, so state and ref cannot diverge —
+        // this is the one write that runs asynchronously, which makes it the worst one to
+        // special-case.
+        commitOwnedPlants(stored);
         ownedPlantIndexRef.current = getNextOwnedPlantIndex(stored);
       })
       .finally(() => {
@@ -533,7 +535,7 @@ export function PlantDataProvider({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [commitOwnedPlants]);
 
   React.useEffect(() => {
     if (!hasHydratedRef.current) return;

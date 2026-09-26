@@ -1,6 +1,7 @@
 import type { GeoLocation } from '../services/types';
 
 import settingsReducer, {
+  hydrateSettings,
   selectActiveLocation,
   setAutoDetectLocation,
   setSelectedLocation,
@@ -29,6 +30,7 @@ const london: GeoLocation = {
 function buildState(overrides: Partial<SettingsState> = {}): SettingsState {
   return {
     autoDetectLocation: true,
+    isHydrated: true,
     detectedLocation: null,
     selectedLocation: null,
     weatherAdjustmentEnabled: true,
@@ -37,8 +39,18 @@ function buildState(overrides: Partial<SettingsState> = {}): SettingsState {
 }
 
 describe('settingsSlice', () => {
-  it('starts with both switches on and no location known', () => {
-    expect(settingsReducer(undefined, { type: '@@INIT' })).toEqual(buildState());
+  it('starts with both switches on, no location known, and unhydrated', () => {
+    expect(settingsReducer(undefined, { type: '@@INIT' })).toEqual(
+      buildState({ isHydrated: false }),
+    );
+  });
+
+  it('marks itself hydrated even when nothing was saved', () => {
+    // A first run has no settings to restore but still has to announce the read finished, or
+    // consumers wait forever for state that is never coming.
+    const state = settingsReducer(settingsReducer(undefined, { type: '@@INIT' }), hydrateSettings({}));
+
+    expect(state.isHydrated).toBe(true);
   });
 
   it('turns the weather adjustment off without discarding the location', () => {

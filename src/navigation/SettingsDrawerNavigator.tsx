@@ -13,6 +13,7 @@ import {
   type SettingsRowProps,
 } from '../features/settings/components/SettingsPanel';
 import { useWeather } from '../features/weather/WeatherProvider';
+import type { GeoLocation } from '../services/types';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   selectActiveLocation,
@@ -27,11 +28,26 @@ import type { RootNavigation, SettingsDrawerParamList } from './types';
 
 const Drawer = createDrawerNavigator<SettingsDrawerParamList>();
 
+function getLocationValue({
+  activeLocation,
+  autoDetectLocation,
+  hasAttemptedDetection,
+}: {
+  activeLocation: GeoLocation | null;
+  autoDetectLocation: boolean;
+  hasAttemptedDetection: boolean;
+}): string {
+  if (activeLocation) return activeLocation.name;
+  if (autoDetectLocation && !hasAttemptedDetection) return 'Detecting...';
+
+  return 'Not set';
+}
+
 function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
   const dispatch = useAppDispatch();
   const { autoDetectLocation, weatherAdjustmentEnabled } = useAppSelector(state => state.settings);
   const activeLocation = useAppSelector(selectActiveLocation);
-  const { isLoading: isLoadingWeather } = useWeather();
+  const { hasAttemptedDetection } = useWeather();
 
   const openLocationSearch = () => {
     navigation
@@ -39,12 +55,13 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
       ?.navigate(SCREENS.LOCATION_SEARCH, { currentLocationId: activeLocation?.locationId });
   };
 
-  // Detecting, or detected nothing: either way there is no city to show and nothing to tap.
-  const locationValue = activeLocation
-    ? activeLocation.name
-    : isLoadingWeather || autoDetectLocation
-      ? 'Detecting...'
-      : 'Not set';
+  // Three states, not two: a city, still looking, or looked and came up empty. Collapsing the
+  // last two leaves a failed detection showing a progress indicator that never resolves.
+  const locationValue = getLocationValue({
+    activeLocation,
+    autoDetectLocation,
+    hasAttemptedDetection,
+  });
 
   const weatherRows: SettingsRowProps[] = [
     {

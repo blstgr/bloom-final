@@ -2,17 +2,6 @@ import type { GeoLocation } from '../../services/types';
 import { searchLocations } from '../../services/weatherApi';
 
 /**
- * The city segment of the device's IANA timezone, e.g. "Europe/Kyiv" -> "Kyiv".
- *
- * This is the same mechanism iOS's own Date & Time settings use: "Set Automatically" resolves a
- * time zone and displays it as a city. It needs no location permission and no native module,
- * which is the whole reason the feature can ship without touching the iOS or Android projects.
- *
- * Returns null rather than guessing when the zone is missing, is a bare UTC offset, or names no
- * city — a wrong city is worse than no city, because the user cannot tell the schedule is being
- * adjusted for somewhere they have never been.
- */
-/**
  * Zones IANA has renamed, mapped to the current city name.
  *
  * The old identifiers survive as backward-compatible aliases, so a device can still report
@@ -32,6 +21,17 @@ const RENAMED_TIME_ZONE_CITIES: Record<string, string> = {
   'Europe/Zaporozhye': 'Zaporizhzhia',
 };
 
+/**
+ * The city segment of the device's IANA timezone, e.g. "Europe/Kyiv" -> "Kyiv".
+ *
+ * This is the same mechanism iOS's own Date & Time settings use: "Set Automatically" resolves a
+ * time zone and displays it as a city. It needs no location permission and no native module,
+ * which is the whole reason the feature can ship without touching the iOS or Android projects.
+ *
+ * Returns null rather than guessing when the zone is missing, is a bare UTC offset, or names no
+ * city — a wrong city is worse than no city, because the user cannot tell the schedule is being
+ * adjusted for somewhere they have never been.
+ */
 export function getDeviceTimeZoneCity(): string | null {
   let timeZone: string | undefined;
   try {

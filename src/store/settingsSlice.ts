@@ -5,6 +5,10 @@ import type { GeoLocation } from '../services/types';
 import type { RootState } from './store';
 
 export type SettingsState = {
+  /** False until the saved settings have been read back. Consumers that would act on a setting —
+   * fetching a forecast, deciding whether to detect a location — must wait for this, or they act
+   * on defaults that the very next tick replaces. Not persisted: it describes this launch. */
+  isHydrated: boolean;
   /** When on, the location comes from the device's timezone rather than a chosen city. */
   autoDetectLocation: boolean;
   detectedLocation: GeoLocation | null;
@@ -19,6 +23,7 @@ export type SettingsState = {
 // controlled can turn it off once rather than every user having to find it.
 const initialState: SettingsState = {
   autoDetectLocation: true,
+  isHydrated: false,
   detectedLocation: null,
   selectedLocation: null,
   weatherAdjustmentEnabled: true,
@@ -31,10 +36,10 @@ const settingsSlice = createSlice({
     /** Merges what was read from storage over the defaults, so a saved file written before a new
      * setting existed still starts that setting at its default rather than undefined. Not matched
      * by the persistence listener, so restoring cannot trigger a write back. */
-    hydrateSettings: (state, action: PayloadAction<Partial<SettingsState>>) => ({
-      ...state,
-      ...action.payload,
-    }),
+    hydrateSettings: (state, action: PayloadAction<Partial<SettingsState>>) => {
+      Object.assign(state, action.payload);
+      state.isHydrated = true;
+    },
     setAutoDetectLocation: (state, action: PayloadAction<boolean>) => {
       state.autoDetectLocation = action.payload;
       // Switching detection off keeps the location you already had rather than blanking it: the
@@ -81,6 +86,10 @@ export function selectActiveLocation(state: RootState): GeoLocation | null {
 
 export function selectWeatherAdjustmentEnabled(state: RootState): boolean {
   return state.settings.weatherAdjustmentEnabled;
+}
+
+export function selectIsSettingsHydrated(state: RootState): boolean {
+  return state.settings.isHydrated;
 }
 
 export default settingsSlice.reducer;

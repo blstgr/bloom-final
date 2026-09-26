@@ -7,10 +7,10 @@ import { ScreenLayout } from '../components/ui/ScreenLayout';
 import { TopActions } from '../components/ui/TopActions';
 import { PlantDetail } from '../features/plants/components/PlantDetail';
 import { usePlantData } from '../features/plants/data/PlantDataProvider';
-import { buildPlantSchedule, isWateredToday, isWateringTooSoon } from '../features/plants/data/schedule';
+import { isWateredToday } from '../features/plants/data/schedule';
 import { WateringSchedule } from '../features/watering/components/WateringSchedule';
 import { WateringSlider } from '../features/watering/components/WateringSlider';
-import { useEffectiveWateringInterval } from '../features/weather/useEffectiveWateringInterval';
+import { useWateringSchedule } from '../features/weather/useWateringSchedule';
 import { SCREENS, type PlantDetailScreenProps } from '../navigation';
 
 const TOO_SOON_ALERT_TEXT = 'Uh no… you overwater me';
@@ -29,7 +29,7 @@ export function PlantDetailScreen({ navigation, route }: PlantDetailScreenProps)
   const ownedPlant = getOwnedPlantById(route.params?.ownedPlantId);
   const species = getSpeciesById(ownedPlant?.speciesId);
   // Called before the early return below: hooks cannot live behind a conditional.
-  const getEffectiveInterval = useEffectiveWateringInterval();
+  const { buildSchedule, isTooSoon } = useWateringSchedule();
   const [alertText, setAlertText] = React.useState<string | null>(null);
   // Bumped to force-remount WateringSlider back to its unchecked visual after a rejected attempt.
   const [sliderResetKey, setSliderResetKey] = React.useState(0);
@@ -58,15 +58,14 @@ export function PlantDetailScreen({ navigation, route }: PlantDetailScreenProps)
     );
   }
 
-  const intervalDays = getEffectiveInterval(species);
-  const schedule = buildPlantSchedule(ownedPlant, species, undefined, intervalDays);
+  const schedule = buildSchedule(ownedPlant, species);
   const wateringState = isWateredToday(ownedPlant) ? 'completed' : undefined;
 
   const handleCompleteWatering = () => {
     const canReconfirmUndo = Date.now() <= undoReconfirmUntilRef.current;
     undoReconfirmUntilRef.current = 0;
 
-    if (!canReconfirmUndo && isWateringTooSoon(ownedPlant, species, undefined, intervalDays)) {
+    if (!canReconfirmUndo && isTooSoon(ownedPlant, species)) {
       setAlertText(TOO_SOON_ALERT_TEXT);
       setSliderResetKey(key => key + 1);
       return;

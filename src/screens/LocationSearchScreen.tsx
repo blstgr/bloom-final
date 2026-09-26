@@ -4,7 +4,6 @@ import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '../components/ui/AppText';
 import { Icon } from '../components/ui/Icon';
 import { Input, type InputActions } from '../components/ui/Input';
-import { Loader } from '../components/ui/Loader';
 import { ScreenLayout } from '../components/ui/ScreenLayout';
 import { type LocationSearchScreenProps } from '../navigation';
 import type { GeoLocation } from '../services/types';
@@ -21,8 +20,9 @@ const SEARCH_DEBOUNCE_MS = 350;
 const RESULTS_TOP_GAP = spacing.xxl;
 const MESSAGE_LINE_HEIGHT = 20;
 
-function formatLocation(location: GeoLocation): string {
-  // Same-named cities are common, so the region disambiguates where there is one.
+/** What a screen reader announces. Same-named cities are common, so the region and country
+ * disambiguate — the sighted reader has the surrounding list for that, a listener does not. */
+function describeLocation(location: GeoLocation): string {
   return [location.name, location.admin1, location.country].filter(Boolean).join(', ');
 }
 
@@ -113,43 +113,39 @@ export function LocationSearchScreen({ navigation, route }: LocationSearchScreen
         styles.content,
         { paddingTop: RESULTS_TOP_GAP },
       ]}
-      scrollableContent
-      reserveBottomBarSpace>
+      scrollableContent>
       <Pressable accessible={false} onPress={Keyboard.dismiss} style={styles.dismissArea}>
         <View style={styles.panel}>
-          {isLoading ? (
-            <View style={styles.centered}>
-              <Loader size="small" />
-            </View>
-          ) : null}
-          {!isLoading && hasError ? (
+          {hasError ? (
             <AppText align="center" style={styles.message}>
               Couldn't search for cities. Check your connection and try again.
             </AppText>
           ) : null}
-          {!isLoading && !hasError && isSearching && results.length === 0 ? (
-            <AppText align="center" style={styles.message}>
-              No cities match that search.
-            </AppText>
-          ) : null}
-          {!isLoading && results.length > 0 ? (
+          {!hasError && isSearching ? (
             <View accessibilityLabel="City suggestions" style={styles.results}>
               <View style={styles.headingRow}>
                 <AppText variant="titleS">Suggestions</AppText>
               </View>
+              {/* The previous results stay up while the next request is in flight, so the list
+                  does not blank on every keystroke; only a settled empty answer replaces it. */}
+              {results.length === 0 && !isLoading ? (
+                <AppText align="center" style={styles.message}>
+                  No cities match that search.
+                </AppText>
+              ) : null}
               {results.map(location => {
                 const isCurrent = location.locationId === currentLocationId;
 
                 return (
                   <Pressable
-                    accessibilityLabel={formatLocation(location)}
+                    accessibilityLabel={describeLocation(location)}
                     accessibilityRole="button"
                     accessibilityState={{ selected: isCurrent }}
                     key={location.locationId}
                     onPress={() => handleSelect(location)}
                     style={styles.resultRow}>
                     <Icon color={colors.icon.primary} name="search" size="md" />
-                    <AppText>{formatLocation(location)}</AppText>
+                    <AppText>{location.name}</AppText>
                     {isCurrent ? <Icon color={colors.icon.green} name="check" size="md" /> : null}
                   </Pressable>
                 );
@@ -163,11 +159,6 @@ export function LocationSearchScreen({ navigation, route }: LocationSearchScreen
 }
 
 const styles = StyleSheet.create({
-  centered: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-    width: '100%',
-  },
   content: {
     alignItems: 'center',
     paddingHorizontal: layout.screenPadding,

@@ -52,8 +52,9 @@ async function writeJson(key: string, value: unknown): Promise<void> {
   }
 }
 
-/** Reads both saved slices. Returns `{}` on a first run, which `configureStore` treats as "use
- * each slice's own initial state". */
+/** Reads both saved slices. Returns `{}` on a first run, and `hydrateStore` then dispatches
+ * nothing — the store keeps the defaults each slice declared. Restoration is by dispatch rather
+ * than `preloadedState` because the read is async and `configureStore` needs its state up front. */
 export async function loadPersistedState(): Promise<PersistedState> {
   const [favorites, settings] = await Promise.all([
     readJson<FavoritesState>(FAVORITES_STORAGE_KEY),
@@ -70,6 +71,21 @@ export async function loadPersistedState(): Promise<PersistedState> {
  * dispatches from causing a write, and keeps each slice's storage key independent — a change to
  * how settings are shaped cannot invalidate someone's saved favorites.
  */
+/** The settings worth keeping between launches, listed rather than spread.
+ *
+ * `isHydrated` is deliberately absent: it describes this launch, not the user's choices, and
+ * restoring it would announce "already hydrated" on the next cold start before anything had been
+ * read. Naming each field means a future setting has to be added here consciously, rather than
+ * being persisted by accident. */
+function toPersistableSettings(settings: SettingsState): Omit<SettingsState, 'isHydrated'> {
+  return {
+    autoDetectLocation: settings.autoDetectLocation,
+    detectedLocation: settings.detectedLocation,
+    selectedLocation: settings.selectedLocation,
+    weatherAdjustmentEnabled: settings.weatherAdjustmentEnabled,
+  };
+}
+
 export const persistenceMiddleware = createListenerMiddleware<PersistedRootState>();
 
 persistenceMiddleware.startListening({
@@ -87,6 +103,6 @@ persistenceMiddleware.startListening({
     setWeatherAdjustmentEnabled,
   ),
   effect: async (_action, api) => {
-    await writeJson(SETTINGS_STORAGE_KEY, api.getState().settings);
+    await writeJson(SETTINGS_STORAGE_KEY, toPersistableSettings(api.getState().settings));
   },
 });

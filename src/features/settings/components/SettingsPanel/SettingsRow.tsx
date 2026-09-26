@@ -6,19 +6,9 @@ import { Button } from '../../../../components/ui/Button';
 import { Icon } from '../../../../components/ui/Icon';
 import { Input } from '../../../../components/ui/Input';
 import { Toggle } from '../../../../components/ui/Toggle';
-import { colors, spacing } from '../../../../theme';
+import { colors, opacities, spacing } from '../../../../theme';
 
 const REVEALED_SUFFIX_LENGTH = 4;
-// Matches Toggle's own disabled dimming so a whole disabled row reads as one thing.
-const DISABLED_ROW_OPACITY = 0.4;
-
-export type SettingsRowVariant =
-  | 'text'
-  | 'textWithLabel'
-  | 'textWithLabelAndButton'
-  | 'buttonOnly'
-  | 'toggle'
-  | 'navigation';
 
 type TextSettingsRowProps = {
   buttonLabel?: string;
@@ -91,11 +81,18 @@ function ToggleRow({ disabled = false, label, onValueChange, value }: ToggleSett
 function NavigationRow({ disabled = false, label, onPress, value }: NavigationSettingsRowProps) {
   const isInteractive = Boolean(onPress) && !disabled;
 
-  // Not a Pressable when there is nowhere to go: a row that looks tappable and is not is worse
-  // than a plain one. This is the "Your location" row while the location is being detected.
+  // Not a Pressable when there is nowhere to go — a row that looks tappable and is not is worse
+  // than a plain one. It keeps the button role and reports itself disabled, though: to a screen
+  // reader the alternative is two unrelated text fragments with no hint they belong together, or
+  // that this is a control that could become available.
   if (!isInteractive) {
     return (
-      <View style={styles.row}>
+      <View
+        accessibilityLabel={`${label}, ${value}`}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: true }}
+        accessible
+        style={styles.row}>
         <AppText style={disabled ? styles.disabledLabel : undefined}>{label}</AppText>
         <AppText style={disabled ? styles.disabledLabel : styles.navigationValue}>{value}</AppText>
       </View>
@@ -239,7 +236,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   disabledLabel: {
-    opacity: DISABLED_ROW_OPACITY,
+    opacity: opacities.disabled,
   },
   navigationValue: {
     color: colors.text.placeholder,
