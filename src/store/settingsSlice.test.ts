@@ -3,6 +3,7 @@ import type { GeoLocation } from '../services/types';
 import { MAX_RECENT_ITEMS } from './recentItems';
 import settingsReducer, {
   answerLocationPrompt,
+  setFollowSystemTheme,
   hydrateSettings,
   selectActiveLocation,
   setAutoDetectLocation,
@@ -33,7 +34,9 @@ function buildState(overrides: Partial<SettingsState> = {}): SettingsState {
   return {
     autoDetectLocation: true,
     isHydrated: true,
+    darkTheme: false,
     detectedLocation: null,
+    followSystemTheme: true,
     hasAnsweredLocationPrompt: false,
     recentLocations: [],
     selectedLocation: null,
@@ -43,6 +46,14 @@ function buildState(overrides: Partial<SettingsState> = {}): SettingsState {
 }
 
 describe('settingsSlice', () => {
+  it('turning off "follow system" keeps the appearance that was showing', () => {
+    const fromDark = settingsReducer(buildState(), setFollowSystemTheme({ follow: false, systemIsDark: true }));
+    const fromLight = settingsReducer(buildState(), setFollowSystemTheme({ follow: false, systemIsDark: false }));
+
+    expect(fromDark).toMatchObject({ darkTheme: true, followSystemTheme: false });
+    expect(fromLight).toMatchObject({ darkTheme: false, followSystemTheme: false });
+  });
+
   it('records a chosen city as the most recent, without duplicates', () => {
     let state = settingsReducer(buildState(), setSelectedLocation(kyiv));
     state = settingsReducer(state, setSelectedLocation(london));

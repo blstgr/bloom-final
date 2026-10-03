@@ -1,6 +1,12 @@
-import { NavigationContainer } from '@react-navigation/native';
+import {
+  DarkTheme,
+  DefaultTheme,
+  NavigationContainer,
+  type Theme as NavigationTheme,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
+import { StatusBar, useColorScheme } from 'react-native';
 import { Provider as StoreProvider } from 'react-redux';
 
 import { PlantDataProvider } from '../features/plants/data/PlantDataProvider';
@@ -10,7 +16,10 @@ import { LocationSearchScreen } from '../screens/LocationSearchScreen';
 import { PlantDetailScreen } from '../screens/PlantDetailScreen';
 import { PlantSearchScreen } from '../screens/PlantSearchScreen';
 import { SpeciesInfoScreen } from '../screens/SpeciesInfoScreen';
+import { useAppSelector } from '../store/hooks';
+import { selectThemeMode } from '../store/settingsSlice';
 import { hydrateStore, store } from '../store/store';
+import { ThemeProvider, useTheme } from '../theme';
 
 import { AddPlantStackNavigator } from './AddPlantStackNavigator';
 import { SCREENS } from './constants';
@@ -30,10 +39,11 @@ export function RootNavigator() {
 
   return (
     <StoreProvider store={store}>
+      <ThemedRoot>
       <PlantDataProvider>
         {/* Reads the settings slice, so it sits inside StoreProvider; independent of plant data. */}
         <WeatherProvider>
-        <NavigationContainer>
+        <ThemedNavigationContainer>
           <Stack.Navigator
             // Explicit rather than per-platform default, so Android matches iOS's slide.
             screenOptions={{ animation: 'slide_from_right', headerShown: false }}>
@@ -69,9 +79,51 @@ export function RootNavigator() {
               options={SEARCH_SCREEN_OPTIONS}
             />
           </Stack.Navigator>
-        </NavigationContainer>
+        </ThemedNavigationContainer>
         </WeatherProvider>
       </PlantDataProvider>
+      </ThemedRoot>
     </StoreProvider>
   );
+}
+
+/**
+ * Resolves the theme from the user's choice and the system appearance, and applies it to the
+ * whole tree and the status bar. Inside the store provider because the choice lives in settings.
+ */
+function ThemedRoot({ children }: { children: React.ReactNode }) {
+  const systemIsDark = useColorScheme() === 'dark';
+  const mode = useAppSelector(state => selectThemeMode(state, systemIsDark));
+
+  return (
+    <ThemeProvider mode={mode}>
+      <ThemedStatusBar />
+      {children}
+    </ThemeProvider>
+  );
+}
+
+/** The status bar reads the theme like any other consumer, rather than looking the mode up beside
+ * the provider. */
+function ThemedStatusBar() {
+  return <StatusBar barStyle={useTheme().components.statusBar} />;
+}
+
+/**
+ * React Navigation paints scene and container backgrounds from its own theme, which defaults to a
+ * light grey. Derived from the app theme so nothing light shows through in dark — during a
+ * transition or the search fade, before a screen has painted its own background.
+ */
+function ThemedNavigationContainer({ children }: { children: React.ReactNode }) {
+  const theme = useTheme();
+  const navigationTheme = React.useMemo<NavigationTheme>(() => {
+    const base = theme.mode === 'dark' ? DarkTheme : DefaultTheme;
+
+    return {
+      ...base,
+      colors: { ...base.colors, background: theme.colors.background[0] },
+    };
+  }, [theme]);
+
+  return <NavigationContainer theme={navigationTheme}>{children}</NavigationContainer>;
 }

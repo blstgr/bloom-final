@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, ImageBackground, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -11,6 +11,7 @@ import Animated, {
 import { AlertModal } from '../components/ui/AlertModal';
 import { AppText } from '../components/ui/AppText';
 import { Loader } from '../components/ui/Loader';
+import { Photo } from '../components/ui/Photo';
 import { ScreenLayout } from '../components/ui/ScreenLayout';
 import { TopActions } from '../components/ui/TopActions';
 import { usePlantData } from '../features/plants/data/PlantDataProvider';
@@ -177,7 +178,7 @@ export function SpeciesInfoScreen({ navigation, route }: SpeciesInfoScreenProps)
         )}
         topActionsOverlay>
         <View style={styles.loaderContainer}>
-          <Loader />
+          <Loader tone="onSurface" />
         </View>
       </ScreenLayout>
     );
@@ -215,11 +216,14 @@ export function SpeciesInfoScreen({ navigation, route }: SpeciesInfoScreenProps)
             ))}
           </View>
         </Animated.ScrollView>
+        {/* The hero floats over the article as it scrolls, so the dimmed photo sits on an opaque
+            underlay rather than letting the text show through it. */}
         <Animated.View style={[styles.heroImage, heroStyle]}>
-          <ImageBackground
+          <Photo
             resizeMode="cover"
             source={species.detailImage}
             style={styles.heroImageFill}
+            underlay
           />
         </Animated.View>
       </View>

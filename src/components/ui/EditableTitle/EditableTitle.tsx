@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { colors, sizes, spacing, typography } from '../../../theme';
+import { makeThemedStyles, sizes, spacing, typography, useTheme } from '../../../theme';
 import { Icon } from '../Icon';
 import { Touchable } from '../Touchable';
 
@@ -38,6 +38,8 @@ export function EditableTitle({
   value,
   variant = 'titleM',
 }: EditableTitleProps) {
+  const theme = useTheme();
+  const themedStyles = useThemedStyles();
   const textStyle = typography[variant];
   const singleLineHeight = textStyle.lineHeight;
   const isCentered = align === 'center';
@@ -85,6 +87,7 @@ export function EditableTitle({
           <Text
             style={[
               styles.input,
+              themedStyles.input,
               isCentered ? styles.inputCentered : styles.inputLeft,
               textStyle,
               { textAlign: align },
@@ -113,11 +116,12 @@ export function EditableTitle({
             }}
             onSubmitEditing={handleSubmitEditing}
             placeholder={placeholder}
-            placeholderTextColor={colors.text.placeholder}
+            placeholderTextColor={theme.colors.text.placeholder}
             returnKeyType="done"
             scrollEnabled={false}
             style={[
               styles.input,
+              themedStyles.input,
               isCentered ? styles.inputCentered : styles.inputLeft,
               textStyle,
               { height: inputHeight, minHeight: singleLineHeight, textAlign: align },
@@ -135,6 +139,7 @@ export function EditableTitle({
           <Text
             style={[
               styles.displayText,
+              themedStyles.displayText,
               textStyle,
               { textAlign: align },
               availableWidth != null
@@ -144,12 +149,22 @@ export function EditableTitle({
           >
             {value.length > 0 ? value : ''}
           </Text>
-          <Icon color={colors.icon.primary} name="edit" />
+          <Icon color={theme.colors.icon.primary} name="edit" />
         </Touchable>
       )}
     </View>
   );
 }
+
+const useThemedStyles = makeThemedStyles(theme => ({
+  displayText: {
+    color: theme.colors.text.primary,
+  },
+  input: {
+    backgroundColor: theme.colors.raised,
+    color: theme.colors.text.primary,
+  },
+}));
 
 const styles = StyleSheet.create({
   root: {
@@ -169,12 +184,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   displayText: {
-    color: colors.text.primary,
     letterSpacing: 0,
   },
   input: {
-    backgroundColor: colors.surface.white,
-    color: colors.text.primary,
     letterSpacing: 0,
     maxWidth: '100%',
     paddingHorizontal: spacing.none,

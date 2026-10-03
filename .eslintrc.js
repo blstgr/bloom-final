@@ -10,7 +10,6 @@ const BARREL_INTERNALS = {
   EditableTitle: ['EditableTitle'],
   EmptyState: ['EmptyState'],
   GlassView: ['GlassView'],
-  GradientBorder: ['GradientBorder'],
   Icon: ['Icon'],
   Input: ['Input'],
   LocationPrompt: ['LocationPrompt'],
@@ -18,6 +17,7 @@ const BARREL_INTERNALS = {
   Logo: ['Logo'],
   NavBar: ['NavBar', 'NavBarItem'],
   navigation: ['types'],
+  Photo: ['Photo'],
   PhotoGrid: ['PhotoGrid'],
   PlantCard: ['PlantCard'],
   PlantDetail: ['PlantDetail'],
@@ -42,6 +42,26 @@ const noDeepImportPatterns = Object.entries(BARREL_INTERNALS).flatMap(([dir, fil
     message: `Import from the '${dir}' barrel (its index.ts) instead of '${dir}/${file}' directly.`,
   })),
 );
+
+// Colour guardrails (docs/dark-mode-spec.md §4): raw colours live only in src/theme/palette.ts, and
+// nothing outside src/theme reaches past the theme to the palette or the theme definitions.
+const COLOR_LITERAL = String.raw`/^(#[0-9A-Fa-f]{3,8}|rgba?\(.*\)|hsla?\(.*\))$/`;
+const noColorLiterals = [
+  {
+    selector: `Literal[value=${COLOR_LITERAL}]`,
+    message: 'No raw colours outside src/theme — read a token from useTheme() / makeThemedStyles.',
+  },
+  {
+    selector: `TemplateElement[value.raw=${COLOR_LITERAL}]`,
+    message: 'No raw colours outside src/theme — read a token from useTheme() / makeThemedStyles.',
+  },
+];
+const noThemeInternals = [
+  {
+    group: ['**/theme/palette', '**/theme/themes', '**/theme/ThemeProvider'],
+    message: "Import from the theme barrel ('theme'); the palette is never imported outside src/theme.",
+  },
+];
 
 module.exports = {
   root: true,
@@ -69,7 +89,8 @@ module.exports = {
     ],
     'import/no-duplicates': 'error',
     // Catches deep imports when a barrel index.ts exists
-    'no-restricted-imports': ['error', { patterns: noDeepImportPatterns }],
+    'no-restricted-imports': ['error', { patterns: [...noDeepImportPatterns, ...noThemeInternals] }],
+    'no-restricted-syntax': ['error', ...noColorLiterals],
 
     // --- React ---
     // Catches key={index} on lists where items can reorder or be removed
@@ -80,6 +101,15 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'warn',
   },
   overrides: [
+    {
+      // The theme is where colours are defined, so it is the one place literals and its own
+      // internals are allowed.
+      files: ['src/theme/**/*.{ts,tsx}'],
+      rules: {
+        'no-restricted-imports': ['error', { patterns: noDeepImportPatterns }],
+        'no-restricted-syntax': 'off',
+      },
+    },
     {
       // Catches magic numbers in component/screen style & layout code.
       // Exceptions match the project's 9+ rubric: 0, 1, 100, -1.

@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Image,
   StyleSheet,
   View,
   type ImageSourcePropType,
@@ -11,6 +10,7 @@ import {
 import { radii, spacing } from '../../../theme';
 import { Badge } from '../Badge';
 import { BadgePill } from '../BadgePill';
+import { Photo } from '../Photo';
 import { Touchable } from '../Touchable';
 
 // Figma grid tile height, the same on Home, Favorites and Library.
@@ -49,7 +49,8 @@ function PlantCardComponent({
       accessibilityRole="button"
       onPress={onPress}
       style={[styles.card, style]}>
-      <Image resizeMode="cover" source={image} style={styles.image} />
+      {/* The underlay is the grey a remote photo loads over. */}
+      <Photo resizeMode="cover" source={image} style={styles.image} underlay />
       {badge ? (
         <View style={styles.badge}>
           {badge.type === 'badge' ? (

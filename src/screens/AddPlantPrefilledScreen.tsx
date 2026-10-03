@@ -1,10 +1,11 @@
 import React from 'react';
-import { Image, Keyboard, Pressable, StyleSheet } from 'react-native';
+import { Keyboard, Pressable, StyleSheet } from 'react-native';
 
 import { AlertModal } from '../components/ui/AlertModal';
 import { BottomActions } from '../components/ui/BottomActions';
 import { EditableTitle } from '../components/ui/EditableTitle';
 import { NavBar, type NavItem } from '../components/ui/NavBar';
+import { Photo } from '../components/ui/Photo';
 import { ScreenLayout } from '../components/ui/ScreenLayout';
 import { TopActions } from '../components/ui/TopActions';
 import {
@@ -124,7 +125,11 @@ export function AddPlantPrefilledScreen({
         accessible={false}
         onPress={Keyboard.dismiss}
         style={styles.previewImage}>
-        <Image resizeMode="cover" source={detection.image} style={styles.previewImage} />
+        <Photo
+          resizeMode="cover"
+          source={detection.image}
+          style={styles.previewImage}
+        />
       </Pressable>
       {alertText ? (
         <AlertModal

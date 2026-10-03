@@ -3,7 +3,7 @@ import { PanResponder, StyleSheet, useWindowDimensions, View } from 'react-nativ
 
 import { GlassView } from '../../../../components/ui/GlassView';
 import { Icon } from '../../../../components/ui/Icon';
-import { colors, radii, shadows, sizes, spacing } from '../../../../theme';
+import { makeThemedStyles, radii, shadows, sizes, spacing, useTheme } from '../../../../theme';
 
 const SLIDER_MAX_WIDTH = 329;
 const PROGRESS_FILL_RATIO = 0.35;
@@ -51,6 +51,8 @@ export function WateringSlider({
   state,
 }: WateringSliderProps) {
   const { width } = useWindowDimensions();
+  const theme = useTheme();
+  const themedStyles = useThemedStyles();
   const sliderWidth = Math.min(width - spacing.xxl * SLIDER_HORIZONTAL_MARGIN_COUNT, SLIDER_MAX_WIDTH);
   // Matches THUMB_HEIGHT, so the resting/completed state — where width equals this minimum —
   // renders as a true circle rather than an oval.
@@ -172,7 +174,12 @@ export function WateringSlider({
       {/* trackShadow holds only `track` — no overflowing child — so the boxShadow-bearing
        * view's own bounds always match its content exactly. */}
       <View style={styles.trackShadow}>
-        <View style={[styles.track, activeState === 'completed' && styles.completedTrack]}>
+        <View
+          style={[
+            styles.track,
+            themedStyles.track,
+            activeState === 'completed' && themedStyles.completed,
+          ]}>
           {activeState !== 'completed' ? <GlassView border={false} shadow={false} style={styles.blurLayer} /> : null}
         </View>
       </View>
@@ -181,29 +188,39 @@ export function WateringSlider({
       <View
         style={[
           styles.thumb,
-          activeState === 'completed' && styles.completedThumb,
+          themedStyles.thumb,
+          activeState === 'completed' && [styles.completedThumb, themedStyles.completed],
           activeState !== 'completed' && { width: dragWidth },
         ]}>
-        <Icon name={activeState === 'completed' ? 'check' : 'water'} color={colors.icon.inverse} />
+        <Icon name={activeState === 'completed' ? 'check' : 'water'} color={theme.colors.icon.onAccent} />
       </View>
     </View>
   );
 }
+
+const useThemedStyles = makeThemedStyles(theme => ({
+  completed: {
+    backgroundColor: theme.colors.success,
+  },
+  thumb: {
+    backgroundColor: theme.colors.accent,
+  },
+  // A solid rim, so it takes the edge gradient's opening colour.
+  track: {
+    backgroundColor: theme.components.glass.fill,
+    borderColor: theme.components.glass.edge[0],
+  },
+}));
 
 const styles = StyleSheet.create({
   blurLayer: {
     ...StyleSheet.absoluteFill,
   },
   completedThumb: {
-    backgroundColor: colors.brand.green,
     width: '100%',
-  },
-  completedTrack: {
-    backgroundColor: colors.brand.green,
   },
   thumb: {
     alignItems: 'flex-start',
-    backgroundColor: colors.action.primary,
     borderRadius: radii.pill,
     height: THUMB_HEIGHT,
     justifyContent: 'center',
@@ -218,8 +235,6 @@ const styles = StyleSheet.create({
     ...shadows.soft,
   },
   track: {
-    backgroundColor: colors.surface.glass,
-    borderColor: colors.border.white,
     borderRadius: radii.pill,
     borderWidth: sizes.border.thin,
     height: sizes.button.default,

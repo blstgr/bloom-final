@@ -1,0 +1,12 @@
+<resources>
+
+    <!-- Android 12+ dark launch: the app's dark background (#191814) with the dark logo (white
+         stem, green flower — Figma 203:21). Light keeps the platform default (launcher icon on the
+         window background). Only the splash changes; the launcher icon is untouched. -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+        <item name="android:windowSplashScreenBackground">#191814</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon_dark</item>
+    </style>
+
+</resources>

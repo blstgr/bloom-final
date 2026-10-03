@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, type TextProps, type TextStyle } from 'react-native';
 
-import { colors, typography } from '../../../theme';
+import { makeThemedStyles, typography } from '../../../theme';
 
 export type AppTextVariant =
   // Titles — display font, 4 sizes
@@ -35,15 +35,16 @@ function AppTextComponent(
   }: AppTextProps,
   ref: React.ForwardedRef<Text>,
 ) {
+  const toneStyles = useToneStyles();
   const resolvedTone = tone ?? 'primary';
-  const color = colors.text[resolvedTone];
 
   return (
     <Text
       ref={ref}
       style={[
         typography[variant],
-        { color, textAlign: align },
+        toneStyles[resolvedTone],
+        { textAlign: align },
         style,
       ]}
       {...textProps}>
@@ -51,6 +52,13 @@ function AppTextComponent(
     </Text>
   );
 }
+
+const useToneStyles = makeThemedStyles(theme => ({
+  highlighted: { color: theme.colors.text.highlighted },
+  inverse: { color: theme.colors.text.onAccent },
+  placeholder: { color: theme.colors.text.placeholder },
+  primary: { color: theme.colors.text.primary },
+}));
 
 /** Ref-forwarding so the component can be wrapped by `Reanimated.createAnimatedComponent` —
  * Reanimated drives style updates through a ref to the underlying native view, and a plain

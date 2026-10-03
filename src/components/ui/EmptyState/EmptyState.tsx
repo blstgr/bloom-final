@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { colors, spacing } from '../../../theme';
+import { spacing, useTheme } from '../../../theme';
 import { AppText } from '../AppText';
 import { Icon, type IconName } from '../Icon';
 
@@ -22,9 +22,11 @@ export type EmptyStateProps = {
  * into the next instead of fading and jumping at the same time.
  */
 export function EmptyState({ icon, subtitle, title }: EmptyStateProps) {
+  const theme = useTheme();
+
   return (
     <View style={styles.root}>
-      <Icon color={colors.icon.green} name={icon} size="xxl" />
+      <Icon color={theme.colors.icon.success} name={icon} size="xxl" />
       <AppText align="center" variant="titleXl">
         {title}
       </AppText>

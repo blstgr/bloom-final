@@ -26,7 +26,7 @@ import SearchIcon from '../../../assets/icons/search.svg';
 import SunIcon from '../../../assets/icons/sun.svg';
 import TrashIcon from '../../../assets/icons/trash.svg';
 import WaterIcon from '../../../assets/icons/water.svg';
-import { colors, sizes } from '../../../theme';
+import { sizes, useTheme } from '../../../theme';
 
 export type IconName =
   | 'camera'
@@ -57,6 +57,9 @@ export type IconName =
   | 'water';
 
 export type IconProps = {
+  /** Defaults to the theme's icon colour. Not applied to `heartSelected`: the filled favourite
+   * heart is always the favourite colour (docs/dark-mode-spec.md §1), so a control that tints its
+   * icons (a button, a nav item) cannot repaint it. */
   color?: string;
   name: IconName;
   size?: IconSize;
@@ -103,9 +106,12 @@ const iconComponents: Record<IconName, React.ComponentType<SvgProps>> = {
   water: WaterIcon,
 };
 
-export function Icon({ color = colors.icon.primary, name, size = sizes.icon.md }: IconProps) {
+export function Icon({ color, name, size = sizes.icon.md }: IconProps) {
+  const theme = useTheme();
+  const resolvedColor =
+    name === 'heartSelected' ? theme.components.favorite : (color ?? theme.colors.icon.primary);
   const resolvedSize = typeof size === 'number' ? size : iconSizes[size];
   const Component = iconComponents[name];
 
-  return <Component width={resolvedSize} height={resolvedSize} color={color} />;
+  return <Component width={resolvedSize} height={resolvedSize} color={resolvedColor} />;
 }

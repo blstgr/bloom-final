@@ -1,9 +1,10 @@
 import React from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { AlertModal } from '../components/ui/AlertModal';
 import { BottomActions } from '../components/ui/BottomActions';
 import { Loader } from '../components/ui/Loader';
+import { Photo } from '../components/ui/Photo';
 import { ScreenLayout } from '../components/ui/ScreenLayout';
 import { TopActions } from '../components/ui/TopActions';
 import {
@@ -125,7 +126,7 @@ export function AddPlantLoaderScreen({
       bottomActionsOverlay={false}
       bottomActions={<BottomActions bottomBar={<View style={styles.hiddenSnapFooter} />} />}>
       <View style={styles.cameraPreview}>
-        <Image source={previewImage} style={styles.previewImage} />
+        <Photo source={previewImage} style={styles.previewImage} />
         <View style={styles.loaderOverlay}>
           <Loader />
         </View>

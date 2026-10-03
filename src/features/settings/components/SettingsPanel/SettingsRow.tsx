@@ -7,7 +7,7 @@ import { Icon } from '../../../../components/ui/Icon';
 import { Input } from '../../../../components/ui/Input';
 import { Toggle } from '../../../../components/ui/Toggle';
 import { Touchable } from '../../../../components/ui/Touchable';
-import { colors, fontFamilies, opacities, spacing } from '../../../../theme';
+import { makeThemedStyles, opacities, spacing, useTheme } from '../../../../theme';
 
 const REVEALED_SUFFIX_LENGTH = 4;
 
@@ -64,8 +64,10 @@ export function SettingsRow(props: SettingsRowProps) {
 }
 
 function ToggleRow({ disabled = false, label, onValueChange, value }: ToggleSettingsRowProps) {
+  const themedStyles = useThemedStyles();
+
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, themedStyles.row]}>
       <View style={styles.copy}>
         <AppText style={disabled ? styles.disabledLabel : undefined}>{label}</AppText>
       </View>
@@ -80,6 +82,8 @@ function ToggleRow({ disabled = false, label, onValueChange, value }: ToggleSett
 }
 
 function NavigationRow({ disabled = false, label, onPress, value }: NavigationSettingsRowProps) {
+  const theme = useTheme();
+  const themedStyles = useThemedStyles();
   const isInteractive = Boolean(onPress) && !disabled;
 
   // Not a Pressable when there is nowhere to go — a row that looks tappable and is not is worse
@@ -93,9 +97,9 @@ function NavigationRow({ disabled = false, label, onPress, value }: NavigationSe
         accessibilityRole="button"
         accessibilityState={{ disabled: true }}
         accessible
-        style={styles.row}>
+        style={[styles.row, themedStyles.row]}>
         <AppText style={disabled ? styles.disabledLabel : undefined}>{label}</AppText>
-        <AppText style={[styles.staticValue, disabled && styles.disabledLabel]}>{value}</AppText>
+        <AppText style={[themedStyles.value, disabled && styles.disabledLabel]}>{value}</AppText>
       </View>
     );
   }
@@ -106,11 +110,11 @@ function NavigationRow({ disabled = false, label, onPress, value }: NavigationSe
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       onPress={onPress}
-      style={styles.row}>
+      style={[styles.row, themedStyles.row]}>
       <AppText>{label}</AppText>
       <View style={styles.navigationValueGroup}>
-        <AppText style={styles.navigationValue}>{value}</AppText>
-        <Icon name="chevronRight" size="md" color={colors.icon.primary} />
+        <AppText style={themedStyles.value}>{value}</AppText>
+        <Icon name="chevronRight" size="md" color={theme.colors.icon.primary} />
       </View>
     </Touchable>
   );
@@ -128,6 +132,7 @@ function TextRow({
   value = '',
   variant,
 }: TextSettingsRowProps) {
+  const themedStyles = useThemedStyles();
   const [isEditing, setIsEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(value);
   const [fieldDrafts, setFieldDrafts] = React.useState<string[]>(
@@ -168,14 +173,14 @@ function TextRow({
 
   if (variant === 'buttonOnly') {
     return (
-      <View style={styles.row}>
+      <View style={[styles.row, themedStyles.row]}>
         <Button label={buttonLabel ?? 'Log out'} layout="fill" onPress={onPress} size="small" variant="primary" />
       </View>
     );
   }
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, themedStyles.row]}>
       <View style={styles.copy}>
         {hasLabel && label && !isEditing ? <AppText variant="titleS">{label}</AppText> : null}
         {isEditing ? (
@@ -223,6 +228,16 @@ function TextRow({
   );
 }
 
+const useThemedStyles = makeThemedStyles(theme => ({
+  row: {
+    backgroundColor: theme.colors.raised,
+  },
+  // Same Satoshi Medium as the labels (user review 2026-10-03, reversing an earlier Black).
+  value: {
+    color: theme.colors.text.primary,
+  },
+}));
+
 const styles = StyleSheet.create({
   actionButton: {
     alignSelf: 'flex-end',
@@ -239,16 +254,6 @@ const styles = StyleSheet.create({
   disabledLabel: {
     opacity: opacities.disabled,
   },
-  // Values read heavier than their labels (Satoshi Black, user review 2026-10-03), whether they
-  // can be changed from here or not: the city is the answer, the label only the question.
-  navigationValue: {
-    color: colors.text.primary,
-    fontFamily: fontFamilies.bodyBlack,
-  },
-  staticValue: {
-    color: colors.text.primary,
-    fontFamily: fontFamilies.bodyBlack,
-  },
   navigationValueGroup: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -256,7 +261,6 @@ const styles = StyleSheet.create({
   },
   row: {
     alignItems: 'flex-end',
-    backgroundColor: colors.surface.white,
     flexDirection: 'row',
     gap: spacing.md,
     justifyContent: 'space-between',

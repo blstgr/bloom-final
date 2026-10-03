@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
-import { colors, radii, sizes, spacing } from '../../../theme';
+import { makeThemedStyles, radii, sizes, spacing, ThemeProvider, useTheme } from '../../../theme';
 import { AppText } from '../AppText';
 import { Button } from '../Button';
 import { Icon, type IconName } from '../Icon';
@@ -63,44 +63,95 @@ export function AlertModal({
 
   return (
     <Modal onRequestClose={handleClose} transparent visible={visible}>
-      <Pressable accessible={false} onPress={handleClose} style={styles.backdrop}>
-        <Pressable
-          accessible={false}
-          onPress={event => {
-            event.stopPropagation();
-          }}
-          style={styles.card}>
-          <Icon name={VARIANT_ICONS[variant]} color={colors.icon.inverse} size={sizes.icon.lg} />
-          <View style={styles.copy}>
-            {title ? (
-              <AppText accessibilityRole="header" align="center" tone="inverse" variant="titleM">
-                {title}
-              </AppText>
-            ) : null}
-            <AppText align="center" tone="inverse" variant="body">
-              {text}
+      {/* The modal looks the same in both themes, its light look being the reference: a dark card,
+          white text and light glass buttons (user ruling, 2026-10-03). Rendering its content under
+          the light theme gives every control inside it that look without per-control overrides. */}
+      <ThemeProvider mode="light">
+        <AlertModalContent
+          actionLabel={actionLabel}
+          onAction={onAction ?? handleClose}
+          onClose={handleClose}
+          secondaryAction={secondaryAction}
+          text={text}
+          title={title}
+          variant={variant}
+        />
+      </ThemeProvider>
+    </Modal>
+  );
+}
+
+const useThemedStyles = makeThemedStyles(theme => ({
+  backdrop: {
+    backgroundColor: theme.colors.scrim,
+  },
+  card: {
+    backgroundColor: theme.components.modal.card,
+  },
+  content: {
+    color: theme.components.modal.content,
+  },
+}));
+
+function AlertModalContent({
+  actionLabel,
+  onAction,
+  onClose,
+  secondaryAction,
+  text,
+  title,
+  variant,
+}: {
+  actionLabel: string;
+  onAction: () => void;
+  onClose: () => void;
+  secondaryAction?: AlertModalAction;
+  text: string;
+  title?: string;
+  variant: AlertModalVariant;
+}) {
+  const { modal } = useTheme().components;
+  const themedStyles = useThemedStyles();
+
+  return (
+    <Pressable accessible={false} onPress={onClose} style={[styles.backdrop, themedStyles.backdrop]}>
+      <Pressable
+        accessible={false}
+        onPress={event => {
+          event.stopPropagation();
+        }}
+        style={[styles.card, themedStyles.card]}>
+        <Icon name={VARIANT_ICONS[variant]} color={modal.content} size={sizes.icon.lg} />
+        <View style={styles.copy}>
+          {title ? (
+            <AppText
+              accessibilityRole="header"
+              align="center"
+              style={themedStyles.content}
+              variant="titleM">
+              {title}
             </AppText>
-          </View>
-          <View style={styles.actions}>
+          ) : null}
+          <AppText align="center" style={themedStyles.content} variant="body">
+            {text}
+          </AppText>
+        </View>
+        <View style={styles.actions}>
+          <Button label={actionLabel} layout="fill" onPress={onAction} size="small" variant="secondary" />
+          {secondaryAction ? (
+            // Glass like the first: a modal carries no primary button (user ruling, 2026-10-03) —
+            // on the dark card a dark pill would vanish. Order gives the hierarchy.
             <Button
-              label={actionLabel}
+              label={secondaryAction.label}
               layout="fill"
-              onPress={onAction ?? handleClose}
+              onPress={secondaryAction.onPress}
               size="small"
               variant="secondary"
             />
-            {secondaryAction ? (
-              <Button
-                label={secondaryAction.label}
-                layout="fill"
-                onPress={secondaryAction.onPress}
-                size="small"
-              />
-            ) : null}
-          </View>
-        </Pressable>
+          ) : null}
+        </View>
       </Pressable>
-    </Modal>
+    </Pressable>
   );
 }
 
@@ -111,13 +162,11 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     alignItems: 'center',
-    backgroundColor: colors.overlay.scrim,
     flex: 1,
     justifyContent: 'center',
   },
   card: {
     alignItems: 'center',
-    backgroundColor: colors.surface.dark,
     borderRadius: radii.photo,
     gap: spacing.xl,
     maxWidth: sizes.modal.maxWidth,

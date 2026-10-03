@@ -8,7 +8,7 @@ import {
   type TouchableOpacityProps,
 } from 'react-native';
 
-import { colors } from '../../../theme';
+import { makeThemedValue } from '../../../theme';
 
 /** iOS press feedback: how far a pressed control fades. React Native's default (0.2) nearly
  * blanks a control; this keeps it legible while still reading as pressed. */
@@ -35,10 +35,14 @@ export type TouchableProps = SharedTouchableProps & {
   ripple?: TouchableRipple;
 };
 
-const RIPPLES: Record<Exclude<TouchableRipple, 'none'>, PressableAndroidRippleConfig> = {
-  borderless: { borderless: true, color: colors.overlay.ripple, foreground: true },
-  bounded: { borderless: false, color: colors.overlay.ripple, foreground: true },
-};
+type RippleConfigs = Record<Exclude<TouchableRipple, 'none'>, PressableAndroidRippleConfig>;
+
+// Built once per theme, so a Pressable receives the same config object on every render rather
+// than a fresh one each time. Material's pressed state layer is the content colour at ~12%.
+const useRipples = makeThemedValue<RippleConfigs>(theme => ({
+  borderless: { borderless: true, color: theme.colors.ripple, foreground: true },
+  bounded: { borderless: false, color: theme.colors.ripple, foreground: true },
+}));
 
 /**
  * The one pressable every Bloom control is built on, so each platform gets its own press language
@@ -48,6 +52,8 @@ const RIPPLES: Record<Exclude<TouchableRipple, 'none'>, PressableAndroidRippleCo
  * `TouchableOpacity` and `Pressable` per platform themselves.
  */
 export function Touchable({ ripple = 'bounded', ...props }: TouchableProps) {
+  const ripples = useRipples();
+
   // A control that draws its own pressed state gets none of ours on top: a fade would dim the very
   // feedback it is drawing.
   if (ripple === 'none') return <Pressable {...props} />;
@@ -58,7 +64,7 @@ export function Touchable({ ripple = 'bounded', ...props }: TouchableProps) {
     return (
       <Pressable
         {...props}
-        android_ripple={RIPPLES[ripple]}
+        android_ripple={ripples[ripple]}
       />
     );
   }

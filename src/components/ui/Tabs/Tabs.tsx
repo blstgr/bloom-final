@@ -10,7 +10,7 @@ import Reanimated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { colors, durations, radii, sizes, spacing } from '../../../theme';
+import { durations, makeThemedStyles, radii, sizes, spacing, useTheme } from '../../../theme';
 import { AppText } from '../AppText';
 import { GlassView } from '../GlassView';
 import { useSlidingIndicator } from '../SlidingIndicator';
@@ -66,6 +66,11 @@ function TabButton<Key extends string>({
   onTabPress,
   tabKey,
 }: TabButtonProps<Key>) {
+  // Read in the body so the label worklet closes over this theme's colours and is rebuilt when the
+  // mode changes.
+  const { text } = useTheme().colors;
+  const restingLabel = text.primary;
+  const activeLabel = text.onAccent;
   const activeProgress = useSharedValue(isActive ? ACTIVE : INACTIVE);
   const pressProgress = useSharedValue(RELEASED);
 
@@ -90,14 +95,14 @@ function TabButton<Key extends string>({
     ],
   }));
 
-  // A one-frame colour flip would leave the newly selected chip white-on-light — and the
-  // deselected one dark-on-dark — while the pill is still travelling. Cross-fading on the same
+  // A one-frame colour flip would leave the newly selected chip's label on-accent over the glass —
+  // and the deselected one primary over the pill — while the pill is still travelling. Cross-fading on the same
   // curve avoids both.
   const labelStyle = useAnimatedStyle(() => ({
     color: interpolateColor(
       activeProgress.value,
       [INACTIVE, ACTIVE],
-      [colors.text.primary, colors.text.inverse],
+      [restingLabel, activeLabel],
     ),
   }));
 
@@ -125,7 +130,7 @@ function TabButton<Key extends string>({
       style={styles.touchable}>
       <Reanimated.View style={[styles.tab, pressStyle]}>
         {/*
-          * The chip's own glass surface fades out as it becomes active, letting the shared dark
+          * The chip's own glass surface fades out as it becomes active, letting the shared accent
           * pill behind the row show through. Fading the surface rather than drawing the pill on top
           * is what lets the pill travel without covering the labels of the chips it passes over —
           * the trick the reference implementation uses a clip-path for, which React Native has no
@@ -148,6 +153,7 @@ export function Tabs<Key extends string = string>({
   onTabPress,
   tabs,
 }: TabsProps<Key>) {
+  const themedStyles = useThemedStyles();
   const { indicatorStyle, onItemLayout } = useSlidingIndicator(activeKey, tabs.map(tab => tab.key));
 
   return (
@@ -162,7 +168,7 @@ export function Tabs<Key extends string = string>({
         * the row scrolls and needs no scroll-offset correction. Rendered first to sit underneath:
         * React Native paints siblings in document order.
         */}
-      <Reanimated.View pointerEvents="none" style={[styles.indicator, indicatorStyle]} />
+      <Reanimated.View pointerEvents="none" style={[styles.indicator, themedStyles.indicator, indicatorStyle]} />
       {tabs.map(tab => (
         <TabButton
           key={tab.key}
@@ -183,7 +189,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   indicator: {
-    backgroundColor: colors.surface.dark,
     borderRadius: radii.pill,
     bottom: 0,
     left: 0,
@@ -209,3 +214,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 });
+
+const useThemedStyles = makeThemedStyles(theme => ({
+  indicator: {
+    backgroundColor: theme.colors.accent,
+  },
+}));

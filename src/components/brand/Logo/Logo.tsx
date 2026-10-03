@@ -1,10 +1,12 @@
 import React from 'react';
 import Svg, { G, Path } from 'react-native-svg';
 
-import { colors, sizes } from '../../../theme';
+import { sizes, useTheme } from '../../../theme';
 
 export type LogoProps = {
+  /** The wordmark; defaults to the theme's `components.logo.word`. */
   color?: string;
+  /** The flower marks; defaults to the theme's `components.logo.mark`. */
   markColor?: string;
   width?: number;
 };
@@ -22,11 +24,8 @@ const dimensions = {
   },
 } as const;
 
-export function Logo({
-  color = colors.brand.dark,
-  markColor = colors.brand.green,
-  width,
-}: LogoProps) {
+export function Logo({ color, markColor, width }: LogoProps) {
+  const logo = useTheme().components.logo;
   const size = dimensions.logo;
   const renderedWidth = width ?? size.width;
   const renderedHeight = (renderedWidth / size.width) * size.height;
@@ -37,16 +36,13 @@ export function Logo({
       height={renderedHeight}
       viewBox={size.viewBox}
       fill="none">
-      <FullLogo color={color} markColor={markColor} />
+      <FullLogo color={color ?? logo.word} markColor={markColor ?? logo.mark} />
     </Svg>
   );
 }
 
-export function LogoSymbol({
-  color = colors.brand.dark,
-  markColor = colors.brand.green,
-  width,
-}: LogoProps) {
+export function LogoSymbol({ color, markColor, width }: LogoProps) {
+  const logo = useTheme().components.logo;
   const size = dimensions.symbol;
   const renderedWidth = width ?? size.width;
   const renderedHeight = (renderedWidth / size.width) * size.height;
@@ -57,7 +53,7 @@ export function LogoSymbol({
       height={renderedHeight}
       viewBox={size.viewBox}
       fill="none">
-      <SymbolLogo color={color} markColor={markColor} />
+      <SymbolLogo color={color ?? logo.word} markColor={markColor ?? logo.mark} />
     </Svg>
   );
 }

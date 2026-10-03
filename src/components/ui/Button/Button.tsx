@@ -1,10 +1,9 @@
 import React from 'react';
 import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { colors, gradients, radii, shadows, sizes, spacing } from '../../../theme';
+import { makeThemedStyles, radii, shadows, sizes, spacing, useTheme } from '../../../theme';
 import { AppText } from '../AppText';
 import { GlassView } from '../GlassView';
-import { GradientBorder } from '../GradientBorder';
 import { Icon, type IconName } from '../Icon';
 import { Loader } from '../Loader';
 import { Touchable, type TouchableProps } from '../Touchable';
@@ -53,13 +52,15 @@ export function Button({
   variant = 'primary',
   ...pressableProps
 }: ButtonProps) {
+  const theme = useTheme();
+  const themedStyles = useThemedStyles();
   const [buttonLayout, setButtonLayout] = React.useState<{ width: number; height: number } | null>(null);
   const isDisabled = disabled || loading;
   const isPrimary = variant === 'primary';
-  const foreground = isPrimary ? colors.text.inverse : colors.text.primary;
+  const foreground = isPrimary ? theme.colors.icon.onAccent : theme.colors.icon.primary;
   const hasLabel = Boolean(label);
   const isIconOnly = iconOnly || (!hasLabel && Boolean(icon));
-  const loaderTone = isPrimary ? 'onDark' : 'onLight';
+  const loaderTone = isPrimary ? 'onAccent' : 'onSurface';
   const resolvedIconSize = iconSize ?? (isIconOnly ? sizes.icon.md : size === 'small' ? sizes.icon.sm : sizes.icon.md);
   const keepHugWidth = layout === 'hug' && hasLabel && loading && buttonLayout != null;
 
@@ -81,7 +82,7 @@ export function Button({
         <>
           {icon ? <Icon name={icon} color={foreground} size={resolvedIconSize} /> : null}
           {hasLabel ? (
-            <AppText variant="button" tone={isPrimary ? 'inverse' : 'primary'}>
+            <AppText style={isPrimary ? themedStyles.labelOnAccent : themedStyles.label} variant="button">
               {label}
             </AppText>
           ) : null}
@@ -99,31 +100,21 @@ export function Button({
         accessibilityState={{ busy: loading, disabled: isDisabled }}
         disabled={isDisabled}
         ripple={isIconOnly ? 'borderless' : 'bounded'}
-        style={[...touchableStyle, styles.primary]}
+        style={[...touchableStyle, themedStyles.primary]}
         onLayout={event => setButtonLayout(event.nativeEvent.layout)}
         {...pressableProps}>
         {content}
       </Touchable>
     );
 
-    // Android: a flat Material filled button — no rim, no elevation (docs/search-spec.md §5). The
-    // pill clips the ripple to its own shape.
-    if (Platform.OS === 'android') {
-      return <View style={[outerStyle, styles.shadowWrapper]}>{touchable}</View>;
-    }
-
+    // The accent fill alone, with no edge in either mode (docs/dark-mode-spec.md §1). Android is a
+    // flat Material filled button with no elevation (docs/search-spec.md §5); iOS adds the soft
+    // shadow. The pill clips the ripple to its own shape.
     return (
       // Shadow lives on this outer wrapper, never on the same View doing the pill-shape
       // clipping (overflow: 'hidden' always clips a shadow rendered on that same layer).
-      <View style={[outerStyle, styles.primaryShadow]}>
-        <View style={[styles.shadowWrapper, styles.shadowWrapperOpaque]}>
-          <GradientBorder
-            borderRadius={radii.pill}
-            colors={[...gradients.glassBorder]}
-            style={styles.buttonSurface}>
-            {touchable}
-          </GradientBorder>
-        </View>
+      <View style={[outerStyle, Platform.OS !== 'android' && styles.primaryShadow]}>
+        <View style={styles.shadowWrapper}>{touchable}</View>
       </View>
     );
   }
@@ -148,6 +139,20 @@ export function Button({
   );
 }
 
+const useThemedStyles = makeThemedStyles(theme => ({
+  // The label colour is set here rather than through an AppText tone, so it is the same token the
+  // icon beside it uses.
+  label: {
+    color: theme.colors.text.primary,
+  },
+  labelOnAccent: {
+    color: theme.colors.text.onAccent,
+  },
+  primary: {
+    backgroundColor: theme.colors.accent,
+  },
+}));
+
 const styles = StyleSheet.create({
   outer: {
     alignSelf: 'flex-start',
@@ -161,9 +166,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
-  shadowWrapperOpaque: {
-    backgroundColor: colors.surface.white,
-  },
   shadowWrapperFill: {
     width: '100%',
   },
@@ -175,9 +177,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
     paddingHorizontal: spacing.lg,
-  },
-  buttonSurface: {
-    zIndex: 1,
   },
   contentDisabled: {
     opacity: DISABLED_CONTENT_OPACITY,
@@ -207,9 +206,6 @@ const styles = StyleSheet.create({
   normal: {
     minHeight: sizes.button.default,
     minWidth: sizes.button.default,
-  },
-  primary: {
-    backgroundColor: colors.action.primary,
   },
   small: {
     minHeight: sizes.button.small,

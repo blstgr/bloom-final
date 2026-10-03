@@ -5,6 +5,7 @@ import {
 import { CommonActions } from '@react-navigation/native';
 import React from 'react';
 import { StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenLayout } from '../components/ui/ScreenLayout';
 import { TopActions } from '../components/ui/TopActions';
@@ -18,9 +19,11 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   selectActiveLocation,
   setAutoDetectLocation,
+  setDarkTheme,
+  setFollowSystemTheme,
   setWeatherAdjustmentEnabled,
 } from '../store/settingsSlice';
-import { colors, spacing } from '../theme';
+import { makeThemedStyles, spacing, useTheme } from '../theme';
 
 import { SCREENS } from './constants';
 import { TabNavigator } from './TabNavigator';
@@ -44,8 +47,13 @@ function getLocationValue({
 }
 
 function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
+  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
-  const { autoDetectLocation, weatherAdjustmentEnabled } = useAppSelector(state => state.settings);
+  const { autoDetectLocation, followSystemTheme, weatherAdjustmentEnabled } =
+    useAppSelector(state => state.settings);
+  // The mode already resolved for the tree (settings + system, in `selectThemeMode`), so the rule
+  // and the system appearance are read in one place, not again here.
+  const isDark = useTheme().mode === 'dark';
   const activeLocation = useAppSelector(selectActiveLocation);
   const { hasAttemptedDetection } = useWeather();
 
@@ -93,6 +101,26 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
     );
   }
 
+  // "Dark theme" shows the mode on screen: while following the system that is the appearance being
+  // followed rather than the stored choice, which only applies once following is off — a switch
+  // reading "off" on a dark screen would contradict what the user is looking at. While following,
+  // the mode on screen is the system's, which is what turning following off must keep.
+  const themeRows: SettingsRowProps[] = [
+    {
+      label: 'Follow system theme',
+      onValueChange: follow => dispatch(setFollowSystemTheme({ follow, systemIsDark: isDark })),
+      value: followSystemTheme,
+      variant: 'toggle',
+    },
+    {
+      disabled: followSystemTheme,
+      label: 'Dark theme',
+      onValueChange: next => dispatch(setDarkTheme(next)),
+      value: isDark,
+      variant: 'toggle',
+    },
+  ];
+
   const handleLogout = () => {
     navigation.getParent()?.dispatch(
       CommonActions.reset({
@@ -107,9 +135,12 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
     // while the design uses a full-screen settings panel opened from the top-right more button.
     // Keeping settings as custom drawer content preserves that visual model and still enables
     // the drawer gesture through React Navigation.
+    // Scrollable: three panels outgrow a smaller phone's height, and the bottom inset keeps the
+    // last one clear of the home indicator once scrolled to the end.
     <ScreenLayout
       horizontalPadding
-      contentStyle={styles.drawerContent}
+      contentStyle={[styles.drawerContent, { paddingBottom: insets.bottom + spacing.xxl }]}
+      scrollableContent
       topActions={(
         <TopActions
           onRightPress={() => navigation.closeDrawer()}
@@ -118,6 +149,7 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
         />
       )}>
       <SettingsPanel rows={weatherRows} />
+      <SettingsPanel rows={themeRows} />
       <SettingsPanel
         rows={[
           { label: 'Email', value: 'plantkiller@gmail.com', variant: 'textWithLabel' },
@@ -129,12 +161,14 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
 }
 
 export function SettingsDrawerNavigator() {
+  const themedStyles = useThemedStyles();
+
   return (
     <Drawer.Navigator
       drawerContent={CustomDrawerContent}
       screenOptions={{
         drawerPosition: 'right',
-        drawerStyle: styles.drawer,
+        drawerStyle: [styles.drawer, themedStyles.drawer],
         headerShown: false,
       }}>
       <Drawer.Screen component={TabNavigator} name={SCREENS.MAIN_TABS} />
@@ -142,9 +176,17 @@ export function SettingsDrawerNavigator() {
   );
 }
 
+// The screen's own background (flat in dark, the gradient's first stop in light): the settings
+// content paints the full gradient over it, so this only shows at the drawer's edge while it slides,
+// where a raised-white strip would flash against the dark screen.
+const useThemedStyles = makeThemedStyles(theme => ({
+  drawer: {
+    backgroundColor: theme.colors.background[0],
+  },
+}));
+
 const styles = StyleSheet.create({
   drawer: {
-    backgroundColor: colors.surface.white,
     width: '100%',
   },
   drawerContent: {

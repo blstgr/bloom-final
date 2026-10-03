@@ -8,7 +8,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { colors, radii, sizes, spacing } from '../../../theme';
+import { radii, sizes, spacing } from '../../../theme';
 import { AppText } from '../AppText';
 import { GlassView } from '../GlassView';
 import { Icon, type IconName } from '../Icon';
@@ -67,7 +67,8 @@ function TopActionButton({
         onPress={onPress}
         ripple="borderless"
         style={styles.topActionButton}>
-        <Icon color={colors.icon.primary} name={icon} size={sizes.icon.md} />
+        {/* No colour passed: Icon picks the theme's, which keeps a filled heart in its own colour. */}
+        <Icon name={icon} size={sizes.icon.md} />
       </Touchable>
     </GlassView>
   );

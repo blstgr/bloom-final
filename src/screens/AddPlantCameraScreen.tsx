@@ -1,10 +1,11 @@
 import React from 'react';
-import { Image, Linking, StyleSheet } from 'react-native';
+import { Linking, StyleSheet } from 'react-native';
 import { launchCamera } from 'react-native-image-picker';
 
 import { AlertModal } from '../components/ui/AlertModal';
 import { BottomActions } from '../components/ui/BottomActions';
 import { Button } from '../components/ui/Button';
+import { Photo } from '../components/ui/Photo';
 import { ScreenLayout } from '../components/ui/ScreenLayout';
 import { TopActions } from '../components/ui/TopActions';
 import { mockSpecies } from '../features/plants/data/mockPlants';
@@ -126,7 +127,7 @@ export function AddPlantCameraScreen({ navigation, route }: AddPlantCameraScreen
           )}
         />
       )}>
-      <Image source={simulatorFallbackImage} style={styles.previewImage} />
+      <Photo source={simulatorFallbackImage} style={styles.previewImage} />
       {alertText ? (
         <AlertModal
           onClose={() => setAlertText(null)}

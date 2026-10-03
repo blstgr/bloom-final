@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Button } from '../../../../components/ui/Button';
 import { GlassView } from '../../../../components/ui/GlassView';
-import { colors, radii, sizes, spacing } from '../../../../theme';
+import { makeThemedStyles, radii, sizes, spacing } from '../../../../theme';
 
 import { SettingsRow, type SettingsRowProps } from './SettingsRow';
 
@@ -13,6 +13,7 @@ export type SettingsPanelProps = {
 };
 
 export function SettingsPanel({ onLogoutPress, rows }: SettingsPanelProps) {
+  const themedStyles = useThemedStyles();
   const rowKeyCounts = new Map<string, number>();
 
   return (
@@ -32,7 +33,7 @@ export function SettingsPanel({ onLogoutPress, rows }: SettingsPanelProps) {
           return <SettingsRow key={`${rowKeyBase}-${rowKeyCount}`} {...row} />;
         })}
         {onLogoutPress ? (
-          <View style={styles.logout}>
+          <View style={[styles.logout, themedStyles.logout]}>
             <Button label="Log out" onPress={onLogoutPress} />
           </View>
         ) : null}
@@ -40,6 +41,12 @@ export function SettingsPanel({ onLogoutPress, rows }: SettingsPanelProps) {
     </GlassView>
   );
 }
+
+const useThemedStyles = makeThemedStyles(theme => ({
+  logout: {
+    backgroundColor: theme.colors.raised,
+  },
+}));
 
 const styles = StyleSheet.create({
   panel: {
@@ -52,7 +59,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   logout: {
-    backgroundColor: colors.surface.white,
     padding: spacing.xxl,
   },
 });

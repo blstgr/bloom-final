@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, TextInput, View, type GestureResponderEvent } from 'react-native';
 
-import { colors, radii, sizes, spacing, typography } from '../../../theme';
+import { makeThemedStyles, radii, sizes, spacing, typography, useTheme } from '../../../theme';
 import { AppText } from '../AppText';
 import { GlassView } from '../GlassView';
 import { Icon, type IconName, type IconSize } from '../Icon';
@@ -79,14 +79,17 @@ export function Input(props: InputProps) {
     label,
     placeholder,
   } = props;
+  const theme = useTheme();
+  const themedStyles = useThemedStyles();
   const visibleActions = actions.slice(0, MAX_INPUT_ACTIONS);
   const resolvedAccessibilityLabel = firstNonEmptyText(accessibilityLabel, label, placeholder) ?? 'Input';
   const hasLabelRow = firstNonEmptyText(label) != null || labelIcon != null;
   const textStyle = [
     styles.input,
+    themedStyles.input,
     !leadingIcon && styles.inputLeadingPadding,
     visibleActions.length === 0 && styles.inputTrailingPadding,
-    disabled && styles.inputDisabled,
+    disabled && themedStyles.inputDisabled,
   ];
 
   return (
@@ -102,6 +105,7 @@ export function Input(props: InputProps) {
           style={[
             styles.inputWrapper,
             Boolean(error) && styles.inputWrapperError,
+            Boolean(error) && themedStyles.inputWrapperError,
             disabled && styles.inputWrapperDisabled,
           ]}>
           {props.onPress ? (
@@ -115,7 +119,7 @@ export function Input(props: InputProps) {
               onPress={props.onPress}
               style={[styles.triggerArea, visibleActions.length === 0 && styles.triggerAreaOuter]}>
               {leadingIcon ? <LeadingIcon disabled={disabled} icon={leadingIcon} size={leadingIconSize} /> : null}
-              <AppText numberOfLines={1} style={[textStyle, styles.placeholder]}>
+              <AppText numberOfLines={1} style={[textStyle, styles.placeholder, themedStyles.placeholder]}>
                 {placeholder}
               </AppText>
             </Touchable>
@@ -149,7 +153,7 @@ export function Input(props: InputProps) {
                     index === visibleActions.length - 1 && styles.actionButtonOuter,
                   ]}>
                   <Icon
-                    color={disabled || action.disabled ? colors.action.disabled : colors.icon.primary}
+                    color={disabled || action.disabled ? theme.colors.icon.disabled : theme.colors.icon.primary}
                     name={action.icon}
                     size={action.iconSize ?? 'sm'}
                   />
@@ -160,7 +164,7 @@ export function Input(props: InputProps) {
         </View>
       </GlassView>
       {error ? (
-        <AppText variant="body" style={styles.errorText}>
+        <AppText variant="body" style={themedStyles.errorText}>
           {error}
         </AppText>
       ) : null}
@@ -169,9 +173,11 @@ export function Input(props: InputProps) {
 }
 
 function LeadingIcon({ disabled, icon, size }: { disabled: boolean; icon: IconName; size: IconSize }) {
+  const theme = useTheme();
+
   return (
     <View style={styles.leadingIconSlot}>
-      <Icon color={disabled ? colors.action.disabled : colors.icon.primary} name={icon} size={size} />
+      <Icon color={disabled ? theme.colors.icon.disabled : theme.colors.icon.primary} name={icon} size={size} />
     </View>
   );
 }
@@ -189,6 +195,8 @@ function EditableField({
   type = 'text',
   value,
 }: EditableInputProps & { accessibilityLabel: string; disabled: boolean; style: React.ComponentProps<typeof TextInput>['style'] }) {
+  const theme = useTheme();
+
   return (
     <TextInput
       ref={inputRef}
@@ -202,7 +210,7 @@ function EditableField({
       onChangeText={onChangeText}
       onFocus={onFocus}
       placeholder={placeholder}
-      placeholderTextColor={disabled ? colors.action.disabled : colors.text.muted}
+      placeholderTextColor={disabled ? theme.colors.text.disabled : theme.colors.text.muted}
       secureTextEntry={type === 'password'}
       style={style}
       value={value}
@@ -218,9 +226,6 @@ const styles = StyleSheet.create({
   container: {
     gap: spacing.xs,
     width: '100%',
-  },
-  errorText: {
-    color: colors.brand.orange,
   },
   labelRow: {
     alignItems: 'center',
@@ -239,12 +244,10 @@ const styles = StyleSheet.create({
     opacity: DISABLED_INPUT_OPACITY,
   },
   inputWrapperError: {
-    borderColor: colors.brand.orange,
     borderRadius: radii.pill,
     borderWidth: sizes.border.thin,
   },
   input: {
-    color: colors.text.primary,
     flex: 1,
     fontFamily: typography.body.fontFamily,
     fontSize: typography.body.fontSize,
@@ -259,11 +262,7 @@ const styles = StyleSheet.create({
   inputTrailingPadding: {
     paddingRight: spacing.md,
   },
-  inputDisabled: {
-    color: colors.action.disabled,
-  },
   placeholder: {
-    color: colors.text.muted,
     minHeight: undefined,
   },
   // Rounded and clipped on the pill's side, so the Android ripple follows the pill's rounded end
@@ -309,3 +308,21 @@ const styles = StyleSheet.create({
     paddingRight: spacing.xs,
   },
 });
+
+const useThemedStyles = makeThemedStyles(theme => ({
+  errorText: {
+    color: theme.colors.danger,
+  },
+  input: {
+    color: theme.colors.text.primary,
+  },
+  inputDisabled: {
+    color: theme.colors.text.disabled,
+  },
+  inputWrapperError: {
+    borderColor: theme.colors.danger,
+  },
+  placeholder: {
+    color: theme.colors.text.muted,
+  },
+}));

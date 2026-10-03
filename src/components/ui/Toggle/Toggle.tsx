@@ -11,7 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { colors, durations, opacities, radii, springs } from '../../../theme';
+import { durations, makeThemedStyles, opacities, radii, springs, useTheme } from '../../../theme';
 import { Touchable } from '../Touchable';
 
 const TRACK_WIDTH = 52;
@@ -58,6 +58,10 @@ export type ToggleProps = {
  * so a tap that does nothing is visibly refused rather than silently swallowed.
  */
 export function Toggle({ accessibilityLabel, disabled = false, onValueChange, value }: ToggleProps) {
+  const themedStyles = useThemedStyles();
+  // Read in the body so the worklet below closes over this theme's colours, and Reanimated rebuilds
+  // it (they are part of its dependencies) when the mode changes.
+  const { trackOff, trackOn } = useTheme().components.toggle;
   const reduceMotion = useReducedMotion();
   const pressScale = useSharedValue(RESTING_SCALE);
   const rejectOffset = useSharedValue(0);
@@ -67,11 +71,7 @@ export function Toggle({ accessibilityLabel, disabled = false, onValueChange, va
   );
 
   const trackStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(
-      progress.value,
-      [0, 1],
-      [colors.brand.dark, colors.brand.green],
-    ),
+    backgroundColor: interpolateColor(progress.value, [0, 1], [trackOff, trackOn]),
   }));
   const thumbStyle = useAnimatedStyle(() => ({
     transform: [
@@ -114,7 +114,7 @@ export function Toggle({ accessibilityLabel, disabled = false, onValueChange, va
       ripple="none"
       style={disabled ? styles.disabled : undefined}>
       <Animated.View style={[styles.track, trackStyle]}>
-        <Animated.View style={[styles.thumb, thumbStyle]} />
+        <Animated.View style={[styles.thumb, themedStyles.thumb, thumbStyle]} />
       </Animated.View>
     </Touchable>
   );
@@ -125,7 +125,6 @@ const styles = StyleSheet.create({
     opacity: opacities.disabled,
   },
   thumb: {
-    backgroundColor: colors.surface.white,
     borderRadius: THUMB_RADIUS,
     height: THUMB_SIZE,
     width: THUMB_SIZE,
@@ -138,3 +137,9 @@ const styles = StyleSheet.create({
     width: TRACK_WIDTH,
   },
 });
+
+const useThemedStyles = makeThemedStyles(theme => ({
+  thumb: {
+    backgroundColor: theme.components.toggle.thumb,
+  },
+}));

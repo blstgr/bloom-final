@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  ImageBackground,
   StyleSheet,
   View,
   type ImageSourcePropType,
@@ -8,6 +7,7 @@ import {
 
 import { AppText } from '../../../../components/ui/AppText';
 import { EditableTitle } from '../../../../components/ui/EditableTitle';
+import { Photo } from '../../../../components/ui/Photo';
 import { layout, spacing } from '../../../../theme';
 
 type PlantDetailBaseProps = {
@@ -43,7 +43,7 @@ export function PlantDetail({
 }: PlantDetailProps) {
   return (
     <View style={styles.container}>
-      <ImageBackground
+      <Photo
         resizeMode="cover"
         source={image}
         style={styles.imageFrame}

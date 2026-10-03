@@ -8,7 +8,7 @@ import Reanimated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { colors, radii, sizes } from '../../../theme';
+import { radii, sizes, useTheme } from '../../../theme';
 import { Icon, type IconName } from '../Icon';
 import { Touchable } from '../Touchable';
 
@@ -39,13 +39,16 @@ export function NavBarItem({
   itemX,
   onPress,
 }: NavBarItemProps) {
+  const { icon: iconColors } = useTheme().colors;
+
   /*
    * Which icon shows is decided by how far the pill is from this item, not by this item's own
    * `active` flag.
    *
-   * The pill is `colors.action.primary` and a resting icon is `colors.icon.primary` — the same
-   * value. An item the pill merely travels *past* never changes `active`, so a flag-driven
-   * cross-fade never runs for it and its icon sits dark-on-dark until the pill has gone by. Brief
+   * The pill is `theme.colors.accent` and a resting icon is `theme.colors.icon.primary` — the same
+   * value in light, and in dark a light icon over a pill that wants `icon.onAccent`. An item the
+   * pill merely travels *past* never changes `active`, so a flag-driven cross-fade never runs for
+   * it and its icon sits in the resting colour over the pill until the pill has gone by. Brief
    * enough to miss at full frame rate, plainly visible once frames drop.
    *
    * Measuring the overlap instead makes every item invert exactly while the pill covers it, which
@@ -86,10 +89,10 @@ export function NavBarItem({
         * animating SVG props, whereas opacity on a wrapping view can.
         */}
       <Reanimated.View pointerEvents="none" style={[styles.iconLayer, restingIconStyle]}>
-        <Icon name={icon} color={colors.icon.primary} size={sizes.icon.md} />
+        <Icon name={icon} color={iconColors.primary} size={sizes.icon.md} />
       </Reanimated.View>
       <Reanimated.View pointerEvents="none" style={[styles.iconLayer, activeIconStyle]}>
-        <Icon name={icon} color={colors.icon.inverse} size={sizes.icon.md} />
+        <Icon name={icon} color={iconColors.onAccent} size={sizes.icon.md} />
       </Reanimated.View>
     </Touchable>
   );

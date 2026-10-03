@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Image,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -17,8 +16,9 @@ import Reanimated, {
 
 import { BadgePill } from '../../../../components/ui/BadgePill';
 import { Icon } from '../../../../components/ui/Icon';
+import { Photo } from '../../../../components/ui/Photo';
 import { Touchable } from '../../../../components/ui/Touchable';
-import { colors, radii, spacing } from '../../../../theme';
+import { makeThemedStyles, radii, spacing, useTheme } from '../../../../theme';
 
 const CARD_HEIGHT = 130;
 const CARD_MAX_WIDTH = 361;
@@ -48,6 +48,7 @@ export function WateringCard({
   onPress,
 }: WateringCardProps) {
   const { width } = useWindowDimensions();
+  const themedStyles = useThemedStyles();
   const cardWidth = Math.min(width - spacing.md * CARD_HORIZONTAL_MARGIN_COUNT, CARD_MAX_WIDTH);
   const [dismissed, setDismissed] = React.useState(false);
   const collapse = useSharedValue(1);
@@ -84,11 +85,14 @@ export function WateringCard({
         accessibilityLabel={accessibilityLabel}
         accessibilityRole="button"
         onPress={onPress}
-        style={[styles.card, { width: cardWidth }]}>
-        <Image
+        style={[styles.card, themedStyles.underlay, { width: cardWidth }]}>
+        {/* The photo paints its own underlay, so its opacity lets that through, not the green card
+            behind it. */}
+        <Photo
           resizeMode="cover"
           source={image}
           style={[styles.image, { width: cardWidth }]}
+          underlay
         />
         <View pointerEvents="none" style={styles.badge}>
           <BadgePill day={day} icon="water" month={month} variant="inverted" />
@@ -113,6 +117,9 @@ function RightActionReveal({
     ),
   }));
 
+  const theme = useTheme();
+  const themedStyles = useThemedStyles();
+
   const checkStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       Math.min(Math.max(-translation.value, 0), revealWidth) / revealWidth,
@@ -122,16 +129,23 @@ function RightActionReveal({
   }));
 
   return (
-    <View style={[styles.reveal, { width: revealWidth }]}>
+    <View style={[styles.reveal, themedStyles.underlay, { width: revealWidth }]}>
       <Reanimated.View style={[styles.iconOverlay, dropStyle]}>
-        <Icon color={colors.icon.inverse} name="water" />
+        <Icon color={theme.colors.icon.onAccent} name="water" />
       </Reanimated.View>
       <Reanimated.View style={[styles.iconOverlay, checkStyle]}>
-        <Icon color={colors.icon.inverse} name="check" />
+        <Icon color={theme.colors.icon.onAccent} name="check" />
       </Reanimated.View>
     </View>
   );
 }
+
+const useThemedStyles = makeThemedStyles(theme => ({
+  // The card and the swipe reveal behind it: the "watered" green the swipe uncovers.
+  underlay: {
+    backgroundColor: theme.colors.success,
+  },
+}));
 
 const styles = StyleSheet.create({
   badge: {
@@ -146,7 +160,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   card: {
-    backgroundColor: colors.brand.green,
     borderRadius: radii.photo,
     height: CARD_HEIGHT,
     overflow: 'hidden',
@@ -159,14 +172,13 @@ const styles = StyleSheet.create({
     right: spacing.xl,
   },
   image: {
-    backgroundColor: colors.surface.white,
     borderRadius: radii.photo,
     height: CARD_HEIGHT,
+    overflow: 'hidden',
     position: 'absolute',
   },
   reveal: {
     alignItems: 'flex-end',
-    backgroundColor: colors.brand.green,
     bottom: spacing.none,
     height: CARD_HEIGHT,
     justifyContent: 'center',

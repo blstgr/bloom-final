@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
-import { colors, radii, sizes } from '../../../theme';
+import { makeThemedStyles, radii, sizes, useTheme } from '../../../theme';
 import { AppText } from '../AppText';
 import { Icon, type IconName } from '../Icon';
 
@@ -46,12 +46,14 @@ export function Badge({
   style,
   variant = 'default',
 }: BadgeProps) {
+  const { badge } = useTheme().components;
+  const themedStyles = useThemedStyles();
   const countLabel = label ?? (typeof count === 'number' ? `${count}` : undefined);
 
   if (variant === 'alert') {
     return (
-      <View style={[styles.count, size === 'small' && styles.small, style]}>
-        <AppText variant="bodyS" tone="inverse">
+      <View style={[styles.count, themedStyles.count, size === 'small' && styles.small, style]}>
+        <AppText style={themedStyles.countLabel} variant="bodyS">
           {countLabel ?? '!'}
         </AppText>
       </View>
@@ -64,11 +66,14 @@ export function Badge({
       <View
         style={[
           styles.count,
-          inverted && styles.countInverted,
+          themedStyles.count,
+          inverted && themedStyles.countInverted,
           size === 'small' && styles.small,
           style,
         ]}>
-        <AppText variant="bodyS" tone={inverted ? 'primary' : 'inverse'}>
+        <AppText
+          style={inverted ? themedStyles.countInvertedLabel : themedStyles.countLabel}
+          variant="bodyS">
           {countLabel}
         </AppText>
       </View>
@@ -82,40 +87,56 @@ export function Badge({
     <View
       style={[
         styles.icon,
-        inverted && styles.iconInverted,
+        themedStyles.icon,
+        inverted && themedStyles.iconInverted,
         style,
       ]}>
       <Icon
         name={icon ?? 'water'}
         size={sizes.icon.sm}
-        color={inverted ? colors.icon.inverse : colors.icon.primary}
+        color={inverted ? badge.darkContent : badge.lightContent}
       />
     </View>
   );
 }
 
+// Badges sit on photos, so they keep their own colours in both modes (components.badge) rather
+// than following the text and surface roles, which flip with the mode.
+const useThemedStyles = makeThemedStyles(theme => ({
+  count: {
+    backgroundColor: theme.components.badge.count,
+  },
+  countInverted: {
+    backgroundColor: theme.components.badge.light,
+  },
+  countInvertedLabel: {
+    color: theme.components.badge.lightContent,
+  },
+  countLabel: {
+    color: theme.components.badge.countLabel,
+  },
+  icon: {
+    backgroundColor: theme.components.badge.light,
+  },
+  iconInverted: {
+    backgroundColor: theme.components.badge.dark,
+  },
+}));
+
 const styles = StyleSheet.create({
   count: {
     alignItems: 'center',
-    backgroundColor: colors.brand.orange,
     borderRadius: radii.pill,
     height: sizes.nav.badge,
     justifyContent: 'center',
     width: sizes.nav.badge,
   },
-  countInverted: {
-    backgroundColor: colors.surface.white,
-  },
   icon: {
     alignItems: 'center',
-    backgroundColor: colors.surface.white,
     borderRadius: radii.pill,
     height: sizes.badge.md,
     justifyContent: 'center',
     width: sizes.badge.md,
-  },
-  iconInverted: {
-    backgroundColor: colors.surface.dark,
   },
   small: {
     height: sizes.nav.badge,

@@ -15,8 +15,6 @@ import { layout, spacing } from '../theme';
 
 // Figma `506:4205`: the title block's own 24 bottom padding plus the 16 column gap.
 const TITLE_TO_SEARCH_GAP = spacing.xl + spacing.md;
-// The search bar and chips, as one block: the first child of the scroll content.
-const STICKY_CONTROLS_INDEX = [0];
 
 /**
  * The Library: popular indoor plants for the user's climate, filterable, with search one tap away
@@ -48,9 +46,27 @@ export function LibraryScreen({ navigation }: LibraryScreenProps) {
   return (
     <ScreenLayout
       contentStyle={styles.content}
+      // Fixed with the title as one top block; the grid scrolls below it and is cut at its edge,
+      // never showing through the glass (user ruling, 2026-10-03).
+      pinnedHeader={(
+        <View style={styles.pinnedControls}>
+          <Input
+            accessibilityLabel="Search for a plant"
+            actions={searchActions}
+            leadingIcon="search"
+            onPress={openPlantSearch}
+            placeholder="Search plant"
+          />
+          <Tabs
+            activeKey={activeFilter}
+            edgeInset={layout.screenPadding}
+            onTabPress={setActiveFilter}
+            tabs={PLANT_FILTERS}
+          />
+        </View>
+      )}
       reserveBottomBarSpace
       scrollableContent
-      stickyHeaderIndices={STICKY_CONTROLS_INDEX}
       stackedGap={TITLE_TO_SEARCH_GAP}
       topActions={(
         <TopActions
@@ -61,23 +77,6 @@ export function LibraryScreen({ navigation }: LibraryScreenProps) {
           title="Potential victims"
         />
       )}>
-      {/* Pinned once scrolled to: the grid passes behind the search bar and chips, showing through
-          the glass and the gaps between them, rather than the two scrolling away. */}
-      <View style={styles.stickyControls}>
-        <Input
-          accessibilityLabel="Search for a plant"
-          actions={searchActions}
-          leadingIcon="search"
-          onPress={openPlantSearch}
-          placeholder="Search plant"
-        />
-        <Tabs
-          activeKey={activeFilter}
-          edgeInset={layout.screenPadding}
-          onTabPress={setActiveFilter}
-          tabs={PLANT_FILTERS}
-        />
-      </View>
       <PhotoGrid>
         {visiblePlants.map(species => (
           <LibraryPlantCard key={species.speciesId} onOpen={openSpeciesInfo} species={species} />
@@ -111,8 +110,10 @@ function LibraryPlantCard({
 }
 
 const styles = StyleSheet.create({
-  stickyControls: {
+  // The bottom padding is the gap to the grid, and the line the grid scrolls under.
+  pinnedControls: {
     gap: spacing.md,
+    paddingBottom: spacing.md,
   },
   content: {
     gap: spacing.md,

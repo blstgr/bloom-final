@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import type { GeoLocation } from '../services/types';
+import type { ThemeMode } from '../theme';
 
 import { pushRecentItem } from './recentItems';
 import type { RootState } from './store';
@@ -13,6 +14,10 @@ export type SettingsState = {
   /** When on, the location comes from the device's timezone rather than a chosen city. */
   autoDetectLocation: boolean;
   detectedLocation: GeoLocation | null;
+  /** The theme chosen in Settings, consulted only while `followSystemTheme` is off. */
+  darkTheme: boolean;
+  /** When on, the theme follows the system appearance and `darkTheme` is ignored. */
+  followSystemTheme: boolean;
   /** Whether the user has answered the location explainer shown after sign-in. Detection waits
    * for it, so the system permission dialog never appears before the explanation. */
   hasAnsweredLocationPrompt: boolean;
@@ -30,7 +35,9 @@ export type SettingsState = {
 const initialState: SettingsState = {
   autoDetectLocation: true,
   isHydrated: false,
+  darkTheme: false,
   detectedLocation: null,
+  followSystemTheme: true,
   hasAnsweredLocationPrompt: false,
   recentLocations: [],
   selectedLocation: null,
@@ -65,6 +72,18 @@ const settingsSlice = createSlice({
         state.selectedLocation = state.detectedLocation;
       }
     },
+    setDarkTheme: (state, action: PayloadAction<boolean>) => {
+      state.darkTheme = action.payload;
+    },
+    /** Turning "follow system" off keeps the theme that was showing — `systemIsDark` is the
+     * appearance the app was following — so the screen does not flip the moment the switch moves. */
+    setFollowSystemTheme: (
+      state,
+      action: PayloadAction<{ follow: boolean; systemIsDark: boolean }>,
+    ) => {
+      state.followSystemTheme = action.payload.follow;
+      if (!action.payload.follow) state.darkTheme = action.payload.systemIsDark;
+    },
     setDetectedLocation: (state, action: PayloadAction<GeoLocation | null>) => {
       state.detectedLocation = action.payload;
     },
@@ -84,7 +103,9 @@ export const {
   answerLocationPrompt,
   hydrateSettings,
   setAutoDetectLocation,
+  setDarkTheme,
   setDetectedLocation,
+  setFollowSystemTheme,
   setSelectedLocation,
   setWeatherAdjustmentEnabled,
 } = settingsSlice.actions;
@@ -111,3 +132,11 @@ export function selectIsSettingsHydrated(state: RootState): boolean {
 }
 
 export default settingsSlice.reducer;
+
+/** Which theme applies: the system appearance while following it, the chosen one otherwise. */
+export function selectThemeMode(state: RootState, systemIsDark: boolean): ThemeMode {
+  const { darkTheme, followSystemTheme } = state.settings;
+  const isDark = followSystemTheme ? systemIsDark : darkTheme;
+
+  return isDark ? 'dark' : 'light';
+}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { colors, radii, sizes, spacing } from '../../../theme';
+import { makeThemedStyles, radii, sizes, spacing } from '../../../theme';
 import { AppText } from '../AppText';
 import { Badge } from '../Badge';
 import { type IconName } from '../Icon';
@@ -20,6 +20,7 @@ type BadgePillVariantProps =
 export type BadgePillProps = { icon?: IconName } & BadgePillContent & BadgePillVariantProps;
 
 export function BadgePill({ badgeVariant, day, icon = 'water', label, month, variant }: BadgePillProps) {
+  const themedStyles = useThemedStyles();
   const effectiveBadgeVariant =
     variant === 'inverted' ? 'light'
     : variant === 'default' ? 'dark'
@@ -31,14 +32,37 @@ export function BadgePill({ badgeVariant, day, icon = 'water', label, month, var
   const line2 = month ?? parts.slice(1).join(' ');
 
   return (
-    <View style={[styles.base, styles[variant]]}>
+    <View style={[styles.base, variant === 'transparent' ? styles.transparent : themedStyles[variant]]}>
       <Badge icon={icon} variant={badgeStyle} />
-      <AppText style={styles.label} variant="bodyS" tone={variant === 'inverted' ? 'inverse' : 'primary'}>
+      {/* The filled pills sit on photos and take the badge's own colours; the transparent one sits
+       * on the page, so its label follows the mode's text colour. */}
+      <AppText
+        style={[
+          styles.label,
+          variant === 'inverted' && themedStyles.invertedLabel,
+          variant === 'default' && themedStyles.defaultLabel,
+        ]}
+        variant="bodyS">
         {line2 ? `${line1}\n${line2}` : line1}
       </AppText>
     </View>
   );
 }
+
+const useThemedStyles = makeThemedStyles(theme => ({
+  default: {
+    backgroundColor: theme.components.badge.light,
+  },
+  defaultLabel: {
+    color: theme.components.badge.lightContent,
+  },
+  inverted: {
+    backgroundColor: theme.components.badge.dark,
+  },
+  invertedLabel: {
+    color: theme.components.badge.darkContent,
+  },
+}));
 
 const styles = StyleSheet.create({
   base: {
@@ -48,16 +72,11 @@ const styles = StyleSheet.create({
     padding: spacing.xs,
     width: sizes.badge.pill,
   },
-  inverted: {
-    backgroundColor: colors.surface.dark,
-  },
-  default: {
-    backgroundColor: colors.surface.white,
-  },
-  transparent: {
-    backgroundColor: 'transparent',
-  },
   label: {
     textAlign: 'center',
+  },
+  // Theme-independent: the transparent pill sits on the page and has no fill of its own.
+  transparent: {
+    backgroundColor: 'transparent',
   },
 });

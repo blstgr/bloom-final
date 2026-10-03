@@ -1,16 +1,20 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { colors, radii, sizes, spacing } from '../../../theme';
+import { makeThemedStyles, radii, sizes, spacing, useTheme } from '../../../theme';
 
 export type LoaderProps = {
   overlay?: boolean;
   size?: 'default' | 'small';
-  tone?: 'onLight' | 'onDark';
+  /** What the spinner sits on: `onSurface` for the page, glass and secondary controls,
+   * `onAccent` for the accent fill and photos. The overlay backing follows the same role. */
+  tone?: 'onSurface' | 'onAccent';
 };
 
-export function Loader({ overlay = false, size = 'default', tone = 'onDark' }: LoaderProps) {
-  const color = tone === 'onLight' ? colors.icon.primary : colors.icon.inverse;
+export function Loader({ overlay = false, size = 'default', tone = 'onAccent' }: LoaderProps) {
+  const { icon } = useTheme().colors;
+  const themedStyles = useThemedStyles();
+  const color = tone === 'onSurface' ? icon.primary : icon.onAccent;
   const boxSize = size === 'small' ? spacing.xxl : sizes.button.default;
   const spinnerSize = size === 'small' ? 'small' : 'large';
 
@@ -19,24 +23,29 @@ export function Loader({ overlay = false, size = 'default', tone = 'onDark' }: L
       style={[
         styles.container,
         { height: boxSize, width: boxSize },
-        overlay && (tone === 'onLight' ? styles.overlayLight : styles.overlayDark),
+        overlay && styles.overlay,
+        overlay && (tone === 'onSurface' ? themedStyles.overlayOnSurface : themedStyles.overlayOnAccent),
       ]}>
       <ActivityIndicator color={color} size={spinnerSize} />
     </View>
   );
 }
 
+const useThemedStyles = makeThemedStyles(theme => ({
+  overlayOnAccent: {
+    backgroundColor: theme.components.loader.dim,
+  },
+  overlayOnSurface: {
+    backgroundColor: theme.components.loader.frost,
+  },
+}));
+
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  overlayDark: {
-    backgroundColor: colors.overlay.dim,
-    borderRadius: radii.pill,
-  },
-  overlayLight: {
-    backgroundColor: colors.overlay.frost,
+  overlay: {
     borderRadius: radii.pill,
   },
 });

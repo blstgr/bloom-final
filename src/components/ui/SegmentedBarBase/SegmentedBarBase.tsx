@@ -26,8 +26,8 @@ const styles = StyleSheet.create({
   outer: {
     alignSelf: 'center',
   },
-  // GradientBorder's inner View doesn't inherit flexDirection from the outer style,
-  // so the row layout lives here instead.
+  // GlassView's surface is its own View and doesn't inherit flexDirection from the outer
+  // style, so the row layout lives here instead.
   row: {
     flexDirection: 'row',
     justifyContent: 'center',

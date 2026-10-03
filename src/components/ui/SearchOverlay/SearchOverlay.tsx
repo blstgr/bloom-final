@@ -4,7 +4,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Reanimated, { useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, gradients, layout, sizes, spacing } from '../../../theme';
+import { layout, makeThemedStyles, sizes, spacing, useTheme } from '../../../theme';
 import { AppText } from '../AppText';
 import { Icon } from '../Icon';
 import { Input, type InputActions } from '../Input';
@@ -69,6 +69,8 @@ export function SearchOverlay<Item>({
 }: SearchOverlayProps<Item>) {
   const { query, results, setQuery, status } = search;
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
+  const themedStyles = useThemedStyles();
   const keyboard = useAnimatedKeyboard();
   // The input is anchored above the bottom safe area, so the keyboard only has to lift it by the
   // part of its height that rises past that inset.
@@ -97,7 +99,7 @@ export function SearchOverlay<Item>({
   const section = resolveSection({ noMatchesText, errorText, recentItems, results, status });
 
   return (
-    <LinearGradient colors={[...gradients.appBackground]} style={styles.screen}>
+    <LinearGradient colors={[...theme.colors.background]} style={styles.screen}>
       <ScrollView
         contentContainerStyle={[
           styles.content,
@@ -113,7 +115,7 @@ export function SearchOverlay<Item>({
               {section.heading}
             </AppText>
             {section.message ? (
-              <AppText style={styles.message}>{section.message}</AppText>
+              <AppText style={[styles.message, themedStyles.message]}>{section.message}</AppText>
             ) : (
               section.items.map(item => {
                 const isSelected = isItemSelected?.(item) ?? false;
@@ -128,12 +130,12 @@ export function SearchOverlay<Item>({
                     onPress={() => onSelect(item)}
                     style={styles.row}>
                     <View style={styles.rowIconSlot}>
-                      <Icon color={colors.icon.primary} name="search" size="sm" />
+                      <Icon color={theme.colors.icon.primary} name="search" size="sm" />
                     </View>
                     <AppText numberOfLines={1} style={styles.rowLabel}>
                       {label}
                     </AppText>
-                    {isSelected ? <Icon color={colors.icon.green} name="check" size="md" /> : null}
+                    {isSelected ? <Icon color={theme.colors.icon.success} name="check" size="md" /> : null}
                   </Touchable>
                 );
               })
@@ -194,6 +196,12 @@ function resolveSection<Item>({
   }
 }
 
+const useThemedStyles = makeThemedStyles(theme => ({
+  message: {
+    color: theme.colors.text.muted,
+  },
+}));
+
 const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
@@ -208,7 +216,6 @@ const styles = StyleSheet.create({
     right: layout.screenPadding,
   },
   message: {
-    color: colors.text.muted,
     paddingVertical: spacing.xs,
   },
   // minHeight rather than height: the label scales with the OS text size (§6).

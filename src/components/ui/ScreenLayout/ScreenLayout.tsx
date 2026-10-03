@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 're
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { gradients, layout, sizes, spacing } from '../../../theme';
+import { layout, sizes, spacing, useTheme } from '../../../theme';
 
 const FLOATING_BOTTOM_ACTION_RESERVED_HEIGHT = sizes.nav.item;
 /**
@@ -57,9 +57,13 @@ type ScrollableScreenLayoutProps = ScreenLayoutBaseProps & {
    * At rest it preserves the normal 32px rhythm; after scrolling, 16px remains.
    */
   scrollableContentSharesTopGap?: boolean;
-  /** Children pinned to the top of the scroll area once scrolled to, with the rest of the content
-   * passing behind them (ScrollView's sticky headers). Indexes into this screen's children. */
-  stickyHeaderIndices?: number[];
+  /**
+   * Controls fixed above the scroll area, part of the screen's top block with the title (the
+   * Library's search bar and chips): the content scrolls below them and is cut at their bottom
+   * edge, never showing through them (user ruling, 2026-10-03). Not a ScrollView sticky header:
+   * on iOS with the New Architecture a sticky header was laid out but never painted.
+   */
+  pinnedHeader?: React.ReactNode;
 } & (
   | {
       /**
@@ -81,7 +85,7 @@ type ScrollableScreenLayoutProps = ScreenLayoutBaseProps & {
 type StaticScreenLayoutProps = ScreenLayoutBaseProps & {
   scrollableContent?: false;
   scrollableContentSharesTopGap?: never;
-  stickyHeaderIndices?: never;
+  pinnedHeader?: never;
   /**
    * Only meaningful on a scrollable screen: the reserve is scroll-content padding, and a static
    * screen has no scroll content to pad. Declared `never` so setting it is a compile error rather
@@ -103,11 +107,12 @@ export function ScreenLayout({
   scrollableContent = false,
   scrollableContentSharesTopGap = false,
   stackedGap = spacing.xxl,
-  stickyHeaderIndices,
+  pinnedHeader,
   topActions,
   topActionsOverlay = false,
 }: ScreenLayoutProps) {
   const safeAreaInsets = useSafeAreaInsets();
+  const theme = useTheme();
   const isOverlay = bottomActions != null && bottomActionsOverlay;
   const isStacked = bottomActions != null && !bottomActionsOverlay;
   // A floating bar needs the same bottom inset whether this screen renders it or the navigator
@@ -161,26 +166,30 @@ export function ScreenLayout({
   ];
 
   return (
-    <LinearGradient colors={[...gradients.appBackground]} style={styles.screen}>
+    <LinearGradient colors={[...theme.colors.background]} style={styles.screen}>
       <View style={rootStyle}>
         {topActions && !topActionsOverlay ? (
           <View style={topActionsStyle}>{topActions}</View>
         ) : null}
         {scrollableContent ? (
-          <ScrollView
-            {...contentContainerProps}
-            stickyHeaderIndices={stickyHeaderIndices}
-            style={styles.content}
-            contentContainerStyle={[
-              styles.scrollContent,
-              contentLayoutStyle,
-              horizontalPadding && styles.horizontalPadding,
-              scrollBottomInsetStyle,
-              scrollSharedTopGapStyle,
-              contentStyle,
-            ]}>
-            {renderContentChildren(children, contentLayout)}
-          </ScrollView>
+          <View style={styles.content}>
+            {pinnedHeader != null ? (
+              <View style={styles.pinnedHeader}>{pinnedHeader}</View>
+            ) : null}
+            <ScrollView
+              {...contentContainerProps}
+              style={styles.scrollArea}
+              contentContainerStyle={[
+                styles.scrollContent,
+                contentLayoutStyle,
+                horizontalPadding && styles.horizontalPadding,
+                scrollBottomInsetStyle,
+                scrollSharedTopGapStyle,
+                contentStyle,
+              ]}>
+              {renderContentChildren(children, contentLayout)}
+            </ScrollView>
+          </View>
         ) : (
           <View
             style={[
@@ -249,6 +258,12 @@ const styles = StyleSheet.create({
   },
   bottomActionsStacked: {
     width: '100%',
+  },
+  pinnedHeader: {
+    paddingHorizontal: layout.screenPadding,
+  },
+  scrollArea: {
+    flex: 1,
   },
   content: {
     flex: 1,

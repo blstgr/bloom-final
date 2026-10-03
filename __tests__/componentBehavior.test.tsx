@@ -4,6 +4,7 @@ import { Provider as StoreProvider } from 'react-redux';
 import ReactTestRenderer from 'react-test-renderer';
 
 import { Button } from '../src/components/ui/Button';
+import { Icon } from '../src/components/ui/Icon';
 import { Input } from '../src/components/ui/Input';
 import { NavBar, type NavItem } from '../src/components/ui/NavBar';
 import { Tabs, type TabItem } from '../src/components/ui/Tabs';
@@ -14,6 +15,7 @@ import { WateringSlider } from '../src/features/watering/components/WateringSlid
 import { WeatherProvider } from '../src/features/weather/WeatherProvider';
 import { MainTabBar, SCREENS } from '../src/navigation';
 import { store } from '../src/store/store';
+import { ThemeProvider, useTheme, type Theme } from '../src/theme';
 
 function render(element: React.ReactElement) {
   let renderer: ReactTestRenderer.ReactTestRenderer;
@@ -36,6 +38,27 @@ describe('component behavior', () => {
       busy: true,
       disabled: true,
     });
+  });
+
+  it('keeps the filled heart the favourite colour even when a caller tints it', () => {
+    let theme: Theme | undefined;
+    function ThemeProbe() {
+      theme = useTheme();
+      return null;
+    }
+
+    const renderer = render(
+      <ThemeProvider mode="dark">
+        <ThemeProbe />
+        <Button icon="heartSelected" label="Favourite" />
+        <Icon color="currentColor" name="heartSelected" />
+      </ThemeProvider>,
+    );
+    const hearts = renderer.root.findAllByType(Icon).filter(node => node.props.name === 'heartSelected');
+    const rendered = hearts.map(heart => heart.children[0] as ReactTestRenderer.ReactTestInstance);
+
+    expect(rendered).toHaveLength(2);
+    rendered.forEach(svg => expect(svg.props.color).toBe(theme?.components.favorite));
   });
 
   it('maps input type, disabled state, error text, and password hiding to TextInput props', () => {
@@ -168,6 +191,31 @@ describe('component behavior', () => {
     });
 
     expect(onSaveFields).toHaveBeenCalledWith(['Moss', 'Stone']);
+  });
+
+  // The "Dark theme" row while following the system: it mirrors the system appearance, so it
+  // must read as a disabled switch and refuse a tap rather than store a choice that is ignored.
+  it('reports a disabled settings toggle as a disabled switch and ignores presses', () => {
+    const onValueChange = jest.fn();
+    const renderer = render(
+      <SettingsRow
+        disabled
+        label="Dark theme"
+        onValueChange={onValueChange}
+        value
+        variant="toggle"
+      />,
+    );
+
+    const toggle = renderer.root.findByProps({ accessibilityRole: 'switch' });
+    expect(toggle.props.accessibilityLabel).toBe('Dark theme');
+    expect(toggle.props.accessibilityState).toEqual({ checked: true, disabled: true });
+
+    ReactTestRenderer.act(() => {
+      toggle.props.onPress?.();
+    });
+
+    expect(onValueChange).not.toHaveBeenCalled();
   });
 
   it('renders nav labels, badges, tab active state, and press handlers from item data', () => {

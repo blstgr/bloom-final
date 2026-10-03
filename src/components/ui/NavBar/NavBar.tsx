@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View, type LayoutRectangle, type StyleProp, type ViewStyle } from 'react-native';
 import Reanimated from 'react-native-reanimated';
 
-import { colors, radii, sizes, spacing } from '../../../theme';
+import { makeThemedStyles, radii, sizes, spacing } from '../../../theme';
 import { Badge } from '../Badge';
 import { type IconName } from '../Icon';
 import { SEGMENTED_BAR_PADDING, SegmentedBarBase } from '../SegmentedBarBase';
@@ -30,6 +30,7 @@ export function NavBar<Key extends string = string>({ activeKey, items, style }:
   // a `forceUpdate()` fired from onLayout, which re-entered layout and looped (an Android ANR)
   // until it was guarded. Updating state only when a rect actually changes removes both the
   // duplicate store and the loop.
+  const themedStyles = useThemedStyles();
   const [itemLayouts, setItemLayouts] = React.useState<Record<string, LayoutRectangle>>({});
   const { indicatorStyle, indicatorWidth, indicatorX, onItemLayout } = useSlidingIndicator(activeKey, items.map(item => item.key));
 
@@ -53,7 +54,7 @@ export function NavBar<Key extends string = string>({ activeKey, items, style }:
           * carrying its own background. Rendered before the items so it paints underneath — React
           * Native draws siblings in document order. Items are a fixed square, so only its x moves.
           */}
-        <Reanimated.View pointerEvents="none" style={[styles.indicator, indicatorStyle]} />
+        <Reanimated.View pointerEvents="none" style={[styles.indicator, themedStyles.indicator, indicatorStyle]} />
         {items.map(item => (
           <View
             key={item.key}
@@ -105,7 +106,6 @@ const styles = StyleSheet.create({
     top: -sizes.nav.badgeOffset,
   },
   indicator: {
-    backgroundColor: colors.action.primary,
     borderRadius: radii.pill,
     height: sizes.nav.item,
     left: 0,
@@ -118,3 +118,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
 });
+
+const useThemedStyles = makeThemedStyles(theme => ({
+  indicator: {
+    backgroundColor: theme.colors.accent,
+  },
+}));

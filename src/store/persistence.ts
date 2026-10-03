@@ -6,7 +6,9 @@ import { addFavorite, removeFavorite, toggleFavorite } from './favoritesSlice';
 import {
   answerLocationPrompt,
   setAutoDetectLocation,
+  setDarkTheme,
   setDetectedLocation,
+  setFollowSystemTheme,
   setSelectedLocation,
   setWeatherAdjustmentEnabled,
   type SettingsState,
@@ -81,7 +83,9 @@ export async function loadPersistedState(): Promise<PersistedState> {
 function toPersistableSettings(settings: SettingsState): Omit<SettingsState, 'isHydrated'> {
   return {
     autoDetectLocation: settings.autoDetectLocation,
+    darkTheme: settings.darkTheme,
     detectedLocation: settings.detectedLocation,
+    followSystemTheme: settings.followSystemTheme,
     hasAnsweredLocationPrompt: settings.hasAnsweredLocationPrompt,
     recentLocations: settings.recentLocations,
     selectedLocation: settings.selectedLocation,
@@ -102,7 +106,9 @@ persistenceMiddleware.startListening({
   matcher: isAnyOf(
     answerLocationPrompt,
     setAutoDetectLocation,
+    setDarkTheme,
     setDetectedLocation,
+    setFollowSystemTheme,
     setSelectedLocation,
     setWeatherAdjustmentEnabled,
   ),
