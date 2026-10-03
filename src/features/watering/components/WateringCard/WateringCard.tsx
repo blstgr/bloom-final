@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Image,
-  Pressable,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -18,6 +17,7 @@ import Reanimated, {
 
 import { BadgePill } from '../../../../components/ui/BadgePill';
 import { Icon } from '../../../../components/ui/Icon';
+import { Touchable } from '../../../../components/ui/Touchable';
 import { colors, radii, spacing } from '../../../../theme';
 
 const CARD_HEIGHT = 130;
@@ -80,7 +80,7 @@ export function WateringCard({
         <RightActionReveal revealWidth={revealWidth} translation={translation} />
       )}
       onSwipeableOpen={handleDismiss}>
-      <Pressable
+      <Touchable
         accessibilityLabel={accessibilityLabel}
         accessibilityRole="button"
         onPress={onPress}
@@ -93,7 +93,7 @@ export function WateringCard({
         <View pointerEvents="none" style={styles.badge}>
           <BadgePill day={day} icon="water" month={month} variant="inverted" />
         </View>
-      </Pressable>
+      </Touchable>
     </Swipeable>
   );
 }

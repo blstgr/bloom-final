@@ -1,2 +1,2 @@
-export { SegmentedBarBase } from './SegmentedBarBase';
+export { SEGMENTED_BAR_PADDING, SegmentedBarBase } from './SegmentedBarBase';
 export type { SegmentedBarBaseProps } from './SegmentedBarBase';

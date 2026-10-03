@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { gradients, layout, sizes, spacing } from '../../../theme';
 
-export const FLOATING_BOTTOM_ACTION_RESERVED_HEIGHT = sizes.nav.item;
+const FLOATING_BOTTOM_ACTION_RESERVED_HEIGHT = sizes.nav.item;
 /**
  * Breathing room between the last scrollable item and the floating bar above it.
  *
@@ -57,6 +57,9 @@ type ScrollableScreenLayoutProps = ScreenLayoutBaseProps & {
    * At rest it preserves the normal 32px rhythm; after scrolling, 16px remains.
    */
   scrollableContentSharesTopGap?: boolean;
+  /** Children pinned to the top of the scroll area once scrolled to, with the rest of the content
+   * passing behind them (ScrollView's sticky headers). Indexes into this screen's children. */
+  stickyHeaderIndices?: number[];
 } & (
   | {
       /**
@@ -78,6 +81,7 @@ type ScrollableScreenLayoutProps = ScreenLayoutBaseProps & {
 type StaticScreenLayoutProps = ScreenLayoutBaseProps & {
   scrollableContent?: false;
   scrollableContentSharesTopGap?: never;
+  stickyHeaderIndices?: never;
   /**
    * Only meaningful on a scrollable screen: the reserve is scroll-content padding, and a static
    * screen has no scroll content to pad. Declared `never` so setting it is a compile error rather
@@ -99,6 +103,7 @@ export function ScreenLayout({
   scrollableContent = false,
   scrollableContentSharesTopGap = false,
   stackedGap = spacing.xxl,
+  stickyHeaderIndices,
   topActions,
   topActionsOverlay = false,
 }: ScreenLayoutProps) {
@@ -164,6 +169,7 @@ export function ScreenLayout({
         {scrollableContent ? (
           <ScrollView
             {...contentContainerProps}
+            stickyHeaderIndices={stickyHeaderIndices}
             style={styles.content}
             contentContainerStyle={[
               styles.scrollContent,

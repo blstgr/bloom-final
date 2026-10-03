@@ -2,6 +2,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import type { GeoLocation } from '../services/types';
 
+import { pushRecentItem } from './recentItems';
 import type { RootState } from './store';
 
 export type SettingsState = {
@@ -12,6 +13,11 @@ export type SettingsState = {
   /** When on, the location comes from the device's timezone rather than a chosen city. */
   autoDetectLocation: boolean;
   detectedLocation: GeoLocation | null;
+  /** Whether the user has answered the location explainer shown after sign-in. Detection waits
+   * for it, so the system permission dialog never appears before the explanation. */
+  hasAnsweredLocationPrompt: boolean;
+  /** Cities chosen in city search, newest first — the search's "Recent searches" section. */
+  recentLocations: GeoLocation[];
   /** Only consulted while `autoDetectLocation` is off, and re-seeded from `detectedLocation`
    * every time detection is switched off — so turning it off always freezes the city that was
    * showing, never one searched for in an earlier session. */
@@ -25,14 +31,22 @@ const initialState: SettingsState = {
   autoDetectLocation: true,
   isHydrated: false,
   detectedLocation: null,
+  hasAnsweredLocationPrompt: false,
+  recentLocations: [],
   selectedLocation: null,
   weatherAdjustmentEnabled: true,
 };
+
 
 const settingsSlice = createSlice({
   name: 'settings',
   initialState,
   reducers: {
+    /** The explainer's two answers: allow detection, or pick a city by hand instead. */
+    answerLocationPrompt: (state, action: PayloadAction<{ allowDetection: boolean }>) => {
+      state.hasAnsweredLocationPrompt = true;
+      state.autoDetectLocation = action.payload.allowDetection;
+    },
     /** Merges what was read from storage over the defaults, so a saved file written before a new
      * setting existed still starts that setting at its default rather than undefined. Not matched
      * by the persistence listener, so restoring cannot trigger a write back. */
@@ -56,6 +70,7 @@ const settingsSlice = createSlice({
     },
     setSelectedLocation: (state, action: PayloadAction<GeoLocation>) => {
       state.selectedLocation = action.payload;
+      state.recentLocations = pushRecentItem(state.recentLocations, action.payload, location => location.locationId);
       // Choosing a city is itself the decision to stop detecting one.
       state.autoDetectLocation = false;
     },
@@ -66,6 +81,7 @@ const settingsSlice = createSlice({
 });
 
 export const {
+  answerLocationPrompt,
   hydrateSettings,
   setAutoDetectLocation,
   setDetectedLocation,

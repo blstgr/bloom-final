@@ -33,7 +33,7 @@ function pickRandomSimulatorImage() {
 const CAMERA_UNAVAILABLE_ERROR_CODE = 'camera_unavailable';
 const CAMERA_PERMISSION_ERROR_CODE = 'permission';
 const PERMISSION_ALERT_TEXT = 'Camera access needed to identify your plants.';
-const PERMISSION_ACTION_LABEL = 'Open Settings';
+const PERMISSION_ACTION_LABEL = 'Open settings';
 
 export function AddPlantCameraScreen({ navigation, route }: AddPlantCameraScreenProps) {
   const { createDetection } = usePlantData();

@@ -1,12 +1,13 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '../../../../components/ui/AppText';
 import { Button } from '../../../../components/ui/Button';
 import { Icon } from '../../../../components/ui/Icon';
 import { Input } from '../../../../components/ui/Input';
 import { Toggle } from '../../../../components/ui/Toggle';
-import { colors, opacities, spacing } from '../../../../theme';
+import { Touchable } from '../../../../components/ui/Touchable';
+import { colors, fontFamilies, opacities, spacing } from '../../../../theme';
 
 const REVEALED_SUFFIX_LENGTH = 4;
 
@@ -94,13 +95,13 @@ function NavigationRow({ disabled = false, label, onPress, value }: NavigationSe
         accessible
         style={styles.row}>
         <AppText style={disabled ? styles.disabledLabel : undefined}>{label}</AppText>
-        <AppText style={disabled ? styles.disabledLabel : styles.navigationValue}>{value}</AppText>
+        <AppText style={[styles.staticValue, disabled && styles.disabledLabel]}>{value}</AppText>
       </View>
     );
   }
 
   return (
-    <Pressable
+    <Touchable
       accessibilityLabel={`${label}, ${value}`}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
@@ -111,7 +112,7 @@ function NavigationRow({ disabled = false, label, onPress, value }: NavigationSe
         <AppText style={styles.navigationValue}>{value}</AppText>
         <Icon name="chevronRight" size="md" color={colors.icon.primary} />
       </View>
-    </Pressable>
+    </Touchable>
   );
 }
 
@@ -238,8 +239,15 @@ const styles = StyleSheet.create({
   disabledLabel: {
     opacity: opacities.disabled,
   },
+  // Values read heavier than their labels (Satoshi Black, user review 2026-10-03), whether they
+  // can be changed from here or not: the city is the answer, the label only the question.
   navigationValue: {
     color: colors.text.primary,
+    fontFamily: fontFamilies.bodyBlack,
+  },
+  staticValue: {
+    color: colors.text.primary,
+    fontFamily: fontFamilies.bodyBlack,
   },
   navigationValueGroup: {
     alignItems: 'center',

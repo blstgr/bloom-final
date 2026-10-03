@@ -5,7 +5,7 @@ import Reanimated from 'react-native-reanimated';
 import { colors, radii, sizes, spacing } from '../../../theme';
 import { Badge } from '../Badge';
 import { type IconName } from '../Icon';
-import { SegmentedBarBase } from '../SegmentedBarBase';
+import { SEGMENTED_BAR_PADDING, SegmentedBarBase } from '../SegmentedBarBase';
 import { useSlidingIndicator } from '../SlidingIndicator';
 
 import { NavBarItem } from './NavBarItem';
@@ -110,7 +110,9 @@ const styles = StyleSheet.create({
     height: sizes.nav.item,
     left: 0,
     position: 'absolute',
-    top: 0,
+    // The pill's x comes from each item's measured layout, which already includes the bar's
+    // padding; its top does not, so it is added here.
+    top: SEGMENTED_BAR_PADDING,
   },
   wrap: {
     alignSelf: 'center',

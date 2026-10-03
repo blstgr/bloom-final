@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Image,
-  Pressable,
   StyleSheet,
   View,
   type ImageSourcePropType,
@@ -12,8 +11,10 @@ import {
 import { radii, spacing } from '../../../theme';
 import { Badge } from '../Badge';
 import { BadgePill } from '../BadgePill';
+import { Touchable } from '../Touchable';
 
-const PLANT_CARD_HEIGHT = 130;
+// Figma grid tile height, the same on Home, Favorites and Library.
+const PLANT_CARD_HEIGHT = 178;
 
 export type PlantCardBadge =
   | {
@@ -43,7 +44,7 @@ function PlantCardComponent({
   style,
 }: PlantCardProps) {
   return (
-    <Pressable
+    <Touchable
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       onPress={onPress}
@@ -62,7 +63,7 @@ function PlantCardComponent({
           )}
         </View>
       ) : null}
-    </Pressable>
+    </Touchable>
   );
 }
 

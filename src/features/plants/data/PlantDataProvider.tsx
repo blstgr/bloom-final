@@ -4,9 +4,10 @@ import type { ImageSourcePropType } from 'react-native';
 import { searchSpecies } from '../../../services/plantApi';
 import { identifyPlant, resolveIdentification } from '../../../services/plantIdApi';
 import type { PerenualSpeciesListItem } from '../../../services/types';
+import { pushRecentItem } from '../../../store/recentItems';
 
+import { getSpeciesById as getCatalogSpeciesById } from './catalog';
 import {
-  getSpeciesById as getMockSpeciesById,
   initialOwnedPlants as defaultInitialOwnedPlants,
 } from './mockPlants';
 import { loadOwnedPlants, saveOwnedPlants } from './ownedPlantsStorage';
@@ -52,13 +53,11 @@ export type PlantDataContextValue = {
   lookupSpeciesByName: (name: string, fallbackImage?: ImageSourcePropType) => Promise<SpeciesLookupResult>;
   markWatered: (ownedPlantId: string) => void;
   ownedPlants: OwnedPlant[];
-  /** Species name to prefill into the Library search box after a "search by photo" capture. */
-  pendingLibrarySearch: string | null;
   renameOwnedPlant: (ownedPlantId: string, customName: string) => PlantNameSaveResult;
   /** Attaches a resolved species (and the generated name that depends on it) to a detection that
    * was created before identification/lookup completed. */
   resolveDetectionSpecies: (detectionId: string, species: PlantSpecies) => void;
-  /** Resolves a specific, already-known Perenual species id (cache-checked) — used by LibraryScreen
+  /** Resolves a specific, already-known Perenual species id (cache-checked) — used by plant search
    * for an exact typed-search result, and by SpeciesInfoScreen to resolve in place when navigated
    * to before resolution has completed (optimistic navigation). `knownName`, when the caller has
    * it, skips the live (confirmed permanently blocked) species/details call entirely in favor of
@@ -69,16 +68,14 @@ export type PlantDataContextValue = {
     knownName?: string,
   ) => Promise<SpeciesLookupResult>;
   saveDetection: (detectionId: string, customName: string) => PlantNameSaveResult;
-  /** Most-recently-opened species from Library search, newest first. */
+  /** Most-recently-opened species from plant search, newest first. */
   searchHistory: PlantSpecies[];
-  setPendingLibrarySearch: (speciesName: string | null) => void;
   unmarkWatered: (ownedPlantId: string) => void;
 };
 
 const INITIAL_DETECTION_INDEX = 1;
 const INITIAL_OWNED_PLANT_INDEX = 1;
 const FIRST_DUPLICATE_SUFFIX = 2;
-const MAX_SEARCH_HISTORY = 3;
 const FIRST_MATCH_INDEX = 0;
 const MAX_LOGGED_CANDIDATES = 3;
 const SCORE_LOG_DECIMAL_PLACES = 2;
@@ -142,7 +139,6 @@ export function PlantDataProvider({
   // data over whatever is on disk, before the read that would have restored it has landed.
   const hasHydratedRef = React.useRef(false);
   const [detections, setDetections] = React.useState<PlantDetection[]>([]);
-  const [pendingLibrarySearch, setPendingLibrarySearch] = React.useState<string | null>(null);
   const [searchHistory, setSearchHistory] = React.useState<PlantSpecies[]>([]);
   const [speciesCacheVersion, setSpeciesCacheVersion] = React.useState(0);
   const ownedPlantsRef = React.useRef<OwnedPlant[]>(initialOwnedPlants);
@@ -197,7 +193,7 @@ export function PlantDataProvider({
   const getSpeciesById = React.useCallback(
     (speciesId: string | undefined) => {
       if (!speciesId) return undefined;
-      return speciesCacheRef.current[speciesId] ?? getMockSpeciesById(speciesId);
+      return speciesCacheRef.current[speciesId] ?? getCatalogSpeciesById(speciesId);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- speciesCacheVersion drives re-reads of the ref
     [speciesCacheVersion],
@@ -484,10 +480,9 @@ export function PlantDataProvider({
   }, [commitOwnedPlants]);
 
   const addSearchHistoryEntry = React.useCallback((species: PlantSpecies) => {
-    setSearchHistory(current => [
-      species,
-      ...current.filter(item => item.speciesId !== species.speciesId),
-    ].slice(0, MAX_SEARCH_HISTORY));
+    setSearchHistory(current =>
+      pushRecentItem(current, species, item => item.speciesId),
+    );
   }, []);
 
   const renameOwnedPlant = React.useCallback(
@@ -555,13 +550,11 @@ export function PlantDataProvider({
       lookupSpeciesByName,
       markWatered,
       ownedPlants,
-      pendingLibrarySearch,
       renameOwnedPlant,
       resolveDetectionSpecies,
       resolveSpeciesById,
       saveDetection,
       searchHistory,
-      setPendingLibrarySearch,
       unmarkWatered,
     }),
     [
@@ -576,7 +569,6 @@ export function PlantDataProvider({
       lookupSpeciesByName,
       markWatered,
       ownedPlants,
-      pendingLibrarySearch,
       renameOwnedPlant,
       resolveDetectionSpecies,
       resolveSpeciesById,

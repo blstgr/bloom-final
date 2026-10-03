@@ -8,6 +8,7 @@ import { WeatherProvider } from '../features/weather/WeatherProvider';
 import { AuthStartScreen } from '../screens/AuthStartScreen';
 import { LocationSearchScreen } from '../screens/LocationSearchScreen';
 import { PlantDetailScreen } from '../screens/PlantDetailScreen';
+import { PlantSearchScreen } from '../screens/PlantSearchScreen';
 import { SpeciesInfoScreen } from '../screens/SpeciesInfoScreen';
 import { hydrateStore, store } from '../store/store';
 
@@ -17,6 +18,7 @@ import { SettingsDrawerNavigator } from './SettingsDrawerNavigator';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const SEARCH_SCREEN_OPTIONS = { animation: 'fade' } as const;
 
 export function RootNavigator() {
   // Restores saved favorites and settings once, on launch. Deliberately not awaited before
@@ -54,7 +56,18 @@ export function RootNavigator() {
               name={SCREENS.SPECIES_INFO}
               options={{ gestureEnabled: false }}
             />
-            <Stack.Screen component={LocationSearchScreen} name={SCREENS.LOCATION_SEARCH} />
+            {/* Fade rather than slide: entering search reads as the trigger turning into the
+                focused field, not as navigating to a new page (docs/search-spec.md §1.1). */}
+            <Stack.Screen
+              component={PlantSearchScreen}
+              name={SCREENS.PLANT_SEARCH}
+              options={SEARCH_SCREEN_OPTIONS}
+            />
+            <Stack.Screen
+              component={LocationSearchScreen}
+              name={SCREENS.LOCATION_SEARCH}
+              options={SEARCH_SCREEN_OPTIONS}
+            />
           </Stack.Navigator>
         </NavigationContainer>
         </WeatherProvider>

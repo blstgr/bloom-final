@@ -1,6 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit';
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
 import { launchCamera } from 'react-native-image-picker';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider as StoreProvider } from 'react-redux';
@@ -8,6 +7,7 @@ import ReactTestRenderer from 'react-test-renderer';
 
 import { AppText } from '../src/components/ui/AppText';
 import { Button } from '../src/components/ui/Button';
+import { Touchable } from '../src/components/ui/Touchable';
 import { mockSpecies } from '../src/features/plants/data/mockPlants';
 import { PlantDataProvider, usePlantData } from '../src/features/plants/data/PlantDataProvider';
 import type { OwnedPlant, PlantSpecies } from '../src/features/plants/data/types';
@@ -19,12 +19,14 @@ import {
   type FavoritesScreenProps,
   type LibraryScreenProps,
   type PlantDetailScreenProps,
+  type PlantSearchScreenProps,
   type SpeciesInfoScreenProps,
 } from '../src/navigation';
 import { AddPlantCameraScreen } from '../src/screens/AddPlantCameraScreen';
 import { FavoritesScreen } from '../src/screens/FavoritesScreen';
 import { LibraryScreen } from '../src/screens/LibraryScreen';
 import { PlantDetailScreen } from '../src/screens/PlantDetailScreen';
+import { PlantSearchScreen } from '../src/screens/PlantSearchScreen';
 import { SpeciesInfoScreen } from '../src/screens/SpeciesInfoScreen';
 import { getSpeciesDetails, searchSpecies } from '../src/services/plantApi';
 import { generateSpeciesCopy } from '../src/services/plantCopyApi';
@@ -43,12 +45,12 @@ const mockedSearchSpecies = jest.mocked(searchSpecies);
 const mockedGetSpeciesDetails = jest.mocked(getSpeciesDetails);
 const mockedGenerateSpeciesCopy = jest.mocked(generateSpeciesCopy);
 const mockedSearchPhoto = jest.mocked(searchPhoto);
-// Comfortably above LibraryScreen's own SEARCH_DEBOUNCE_MS (350ms) so real-timer tests reliably
+// Comfortably above useDebouncedSearch's own 350ms debounce so real-timer tests reliably
 // let the debounced search fire before asserting on its result.
 const SEARCH_DEBOUNCE_FLUSH_MS = 600;
 beforeEach(() => {
   jest.clearAllMocks();
-  // LibraryScreen's search-as-you-type debounce can still fire after a test body returns (real
+  // PlantSearchScreen's search-as-you-type debounce can still fire after a test body returns (real
   // timers, not fake ones) — give it a safe default so a stray fire never calls .then() on
   // undefined from an unconfigured automock.
   mockedSearchSpecies.mockResolvedValue([]);
@@ -109,6 +111,20 @@ function createLibraryProps(
       name: SCREENS.LIBRARY,
     },
   } as unknown as LibraryScreenProps;
+}
+
+/** The search screen's text field — the one node labelled "Search for a plant" that edits. */
+function findSearchField(renderer: ReactTestRenderer.ReactTestRenderer | undefined) {
+  return renderer!.root.findAll(
+    node => node.props.accessibilityLabel === 'Search for a plant' && typeof node.props.onChangeText === 'function',
+  )[0];
+}
+
+function createPlantSearchProps(replace = jest.fn(), goBack = jest.fn()): PlantSearchScreenProps {
+  return {
+    navigation: { addListener: () => () => undefined, goBack, replace },
+    route: { key: SCREENS.PLANT_SEARCH, name: SCREENS.PLANT_SEARCH },
+  } as unknown as PlantSearchScreenProps;
 }
 
 function createSpeciesInfoProps(
@@ -263,7 +279,29 @@ test('missing plant detail can close to home when there is no back route', async
   });
 });
 
-test('renders library search', async () => {
+test('the Library opens on the popular grid, with search one tap away', async () => {
+  const rootNavigate = jest.fn();
+  let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+  await ReactTestRenderer.act(() => {
+    renderer = ReactTestRenderer.create(
+      renderWithProviders(<LibraryScreen {...createLibraryProps(rootNavigate)} />),
+    );
+  });
+
+  // No location in tests, so the grid is the ten most popular plants — never an empty state.
+  expect(renderer?.root.findAllByProps({ accessibilityLabel: 'Open Snake plant' }).length).toBeGreaterThan(0);
+
+  await ReactTestRenderer.act(() => {
+    renderer?.root
+      .findAll(node => node.props.accessibilityLabel === 'Search for a plant' && typeof node.props.onPress === 'function')[0]
+      .props.onPress();
+  });
+
+  expect(rootNavigate).toHaveBeenCalledWith(SCREENS.PLANT_SEARCH);
+});
+
+test('the Library chips filter the grid', async () => {
   let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
   await ReactTestRenderer.act(() => {
@@ -272,7 +310,19 @@ test('renders library search', async () => {
     );
   });
 
-  expect(renderer?.root.findByProps({ accessibilityLabel: 'Search plant wiki' })).toBeTruthy();
+  const hasCardFor = (speciesName: string) =>
+    renderer!.root.findAllByProps({ accessibilityLabel: `Open ${speciesName}` }).length > 0;
+  const shadyChip = renderer!.root
+    .findAllByType(Touchable)
+    .find(node => node.props.accessibilityRole === 'tab' && node.findByType(AppText).props.children === 'Shady');
+
+  // Fiddle leaf fig wants bright light; snake plant copes with shade.
+  expect(hasCardFor('Fiddle leaf fig')).toBe(true);
+  await ReactTestRenderer.act(() => {
+    shadyChip!.props.onPress();
+  });
+  expect(hasCardFor('Fiddle leaf fig')).toBe(false);
+  expect(hasCardFor('Snake plant')).toBe(true);
 });
 
 // The tab bar used to be rendered by each screen, so this was asserted on LibraryScreen. It is
@@ -300,119 +350,113 @@ test('the tab bar marks the active tab selected', async () => {
   ).toBe(true);
 });
 
-test('a seed species match lists and opens without waiting for Perenual', async () => {
-  const rootNavigate = jest.fn();
+test('a shipped species match lists and opens without waiting for Perenual', async () => {
+  const replace = jest.fn();
   let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
-  // Deliberately never resolves: a seed match must not depend on the network call completing.
+  // Deliberately never resolves: a shipped match must not depend on the network call completing.
   mockedSearchSpecies.mockReturnValueOnce(new Promise(() => {}));
 
   await ReactTestRenderer.act(() => {
     renderer = ReactTestRenderer.create(
-      renderWithProviders(<LibraryScreen {...createLibraryProps(rootNavigate)} />),
+      renderWithProviders(<PlantSearchScreen {...createPlantSearchProps(replace)} />),
     );
   });
 
   await ReactTestRenderer.act(() => {
-    renderer?.root.findByProps({ accessibilityLabel: 'Search plant wiki' }).props.onChangeText('Zebra Haworthia');
+    findSearchField(renderer).props.onChangeText('Zebra haworthia');
   });
 
+  // Past the debounce, so the Perenual call is actually made and left hanging — the shipped row
+  // must already be there regardless.
+  await ReactTestRenderer.act(async () => {
+    await new Promise(resolve => setTimeout(resolve, SEARCH_DEBOUNCE_FLUSH_MS));
+  });
+  expect(mockedSearchSpecies).toHaveBeenCalled();
+
   await ReactTestRenderer.act(() => {
-    renderer?.root.findByProps({ accessibilityLabel: 'Open Zebra Haworthia' }).props.onPress();
+    renderer?.root.findAll(node => node.props.accessibilityLabel === 'Open Zebra haworthia' && node.props.onPress)[0].props.onPress();
   });
 
   // The seed slug, not a Perenual number: SpeciesInfoScreen resolves it through getSpeciesById
-  // before it ever reaches the network.
-  expect(rootNavigate).toHaveBeenCalledWith(SCREENS.SPECIES_INFO, {
+  // before it ever reaches the network. Replaced rather than pushed, so closing the article
+  // returns to the Library, not to a half-typed search.
+  expect(replace).toHaveBeenCalledWith(SCREENS.SPECIES_INFO, {
     speciesId: 'zebra-haworthia',
-    speciesName: 'Zebra Haworthia',
+    speciesName: 'Zebra haworthia',
+  });
+
+  ReactTestRenderer.act(() => {
+    renderer?.unmount();
   });
 });
 
-test('navigates from library search result to species info with species id', async () => {
-  const rootNavigate = jest.fn();
+test('navigates from a remote search result to species info with its Perenual id', async () => {
+  const replace = jest.fn();
   let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
   mockedSearchSpecies.mockResolvedValueOnce([
     {
-      common_name: 'Fiddle Leaf Fig',
+      common_name: 'weeping fig',
       default_image: null,
       id: 501,
-      scientific_name: ['Ficus lyrata'],
+      scientific_name: ['Ficus benjamina'],
     },
   ]);
-  mockedGetSpeciesDetails.mockResolvedValueOnce({
-    care_level: 'Easy',
-    common_name: 'Fiddle Leaf Fig',
-    default_image: null,
-    dimensions: null,
-    growth_rate: 'Low',
-    id: 501,
-    poisonous_to_humans: false,
-    poisonous_to_pets: false,
-    scientific_name: ['Ficus lyrata'],
-    sunlight: null,
-    watering_general_benchmark: { unit: 'days', value: '14' },
-  });
-  mockedGenerateSpeciesCopy.mockResolvedValueOnce({
-    category: 'Desert minimalist',
-    description: 'Only needs water when fully dry.',
-    wikiArticle: 'A longer article.',
-  });
 
   await ReactTestRenderer.act(() => {
     renderer = ReactTestRenderer.create(
-      renderWithProviders(<LibraryScreen {...createLibraryProps(rootNavigate)} />),
+      renderWithProviders(<PlantSearchScreen {...createPlantSearchProps(replace)} />),
     );
   });
 
   await ReactTestRenderer.act(() => {
-    renderer?.root.findByProps({ accessibilityLabel: 'Search plant wiki' }).props.onChangeText('Fiddle Leaf Fig');
+    findSearchField(renderer).props.onChangeText('weeping fig');
   });
 
   // A separate act() call: the one above must return (flushing the state update and the effect
-  // it triggers, which is what actually schedules the debounce timer) before this starts waiting
-  // — otherwise the wait below elapses before the timer is even scheduled.
+  // it triggers, which is what actually schedules the debounce timer) before this starts waiting.
   await ReactTestRenderer.act(async () => {
     await new Promise(resolve => setTimeout(resolve, SEARCH_DEBOUNCE_FLUSH_MS));
   });
 
+  // Perenual's lowercase name arrives sentence-cased.
   await ReactTestRenderer.act(() => {
-    renderer?.root.findByProps({ accessibilityLabel: 'Open Fiddle Leaf Fig' }).props.onPress();
+    renderer?.root.findAll(node => node.props.accessibilityLabel === 'Open Weeping fig' && node.props.onPress)[0].props.onPress();
   });
 
-  // Flushes the tap handler's own getSpeciesDetails -> generateSpeciesCopy promise chain.
-  await ReactTestRenderer.act(async () => {
-    await new Promise(resolve => setTimeout(resolve, 0));
-  });
-
-  expect(rootNavigate).toHaveBeenCalledWith(SCREENS.SPECIES_INFO, {
+  expect(replace).toHaveBeenCalledWith(SCREENS.SPECIES_INFO, {
     speciesId: '501',
-    speciesName: 'Fiddle Leaf Fig',
+    speciesName: 'Weeping fig',
   });
 });
 
-test('library search replaces camera action with clear action while typing', async () => {
+test('the search close icon clears a query, then leaves search', async () => {
+  const goBack = jest.fn();
   let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
   await ReactTestRenderer.act(() => {
     renderer = ReactTestRenderer.create(
-      renderWithProviders(<LibraryScreen {...createLibraryProps()} />),
+      renderWithProviders(<PlantSearchScreen {...createPlantSearchProps(jest.fn(), goBack)} />),
     );
   });
 
-  expect(renderer?.root.findByProps({ accessibilityLabel: 'Search plant by photo' })).toBeTruthy();
-
   await ReactTestRenderer.act(() => {
-    renderer?.root.findByProps({ accessibilityLabel: 'Search plant wiki' }).props.onChangeText('Z');
+    findSearchField(renderer).props.onChangeText('Z');
+  });
+  await ReactTestRenderer.act(() => {
+    renderer?.root.findAll(node => node.props.accessibilityLabel === 'Clear search' && node.props.onPress)[0].props.onPress();
   });
 
-  expect(renderer?.root.findAllByProps({ accessibilityLabel: 'Search plant by photo' })).toHaveLength(0);
-  expect(renderer?.root.findByProps({ accessibilityLabel: 'Clear plant search' })).toBeTruthy();
+  expect(findSearchField(renderer).props.value).toBe('');
+  expect(goBack).not.toHaveBeenCalled();
 
-  // Unmount before the test ends so the pending search-debounce timeout this typing started
-  // (never awaited above, since this test only checks synchronous UI state) is cancelled by the
-  // effect cleanup, rather than firing later against a torn-down Jest environment.
+  await ReactTestRenderer.act(() => {
+    renderer?.root.findAll(node => node.props.accessibilityLabel === 'Close search' && node.props.onPress)[0].props.onPress();
+  });
+
+  expect(goBack).toHaveBeenCalled();
+
   ReactTestRenderer.act(() => {
     renderer?.unmount();
   });
@@ -619,7 +663,7 @@ test('filters favorited species by the active tab on FavoritesScreen', async () 
     renderer!.root.findAllByProps({ accessibilityLabel: `Open ${speciesName}` }).length > 0;
   const findTab = (label: string) =>
     renderer!.root
-      .findAllByType(TouchableOpacity)
+      .findAllByType(Touchable)
       .find(node => node.props.accessibilityRole === 'tab' && node.findByType(AppText).props.children === label);
   const pressTab = (label: string) => {
     const tab = findTab(label);
@@ -631,14 +675,14 @@ test('filters favorited species by the active tab on FavoritesScreen', async () 
   expect(hasCardFor(zzPlant.speciesName)).toBe(true);
   expect(hasCardFor(parlorPalm.speciesName)).toBe(true);
 
-  // High-Maintenance matches neither favorited species, so it shouldn't even be offered as a tab.
-  expect(findTab('High-Maintenance')).toBeUndefined();
+  // Moody matches neither favorited species, so it shouldn't even be offered as a chip.
+  expect(findTab('Moody')).toBeUndefined();
 
-  pressTab('Pet Approved');
+  pressTab('Pet-safe');
   expect(hasCardFor(zzPlant.speciesName)).toBe(false);
   expect(hasCardFor(parlorPalm.speciesName)).toBe(true);
 
-  pressTab('Easy Peasy');
+  pressTab('Unkillable');
   expect(hasCardFor(zzPlant.speciesName)).toBe(true);
   expect(hasCardFor(parlorPalm.speciesName)).toBe(false);
 });

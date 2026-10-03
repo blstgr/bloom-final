@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native';
 import Reanimated, {
   Extrapolation,
   interpolate,
@@ -9,8 +9,8 @@ import Reanimated, {
 } from 'react-native-reanimated';
 
 import { colors, radii, sizes } from '../../../theme';
-import { GLASS_BUTTON_ACTIVE_OPACITY } from '../Button';
 import { Icon, type IconName } from '../Icon';
+import { Touchable } from '../Touchable';
 
 const HALF = 2;
 
@@ -73,12 +73,12 @@ export function NavBarItem({
   const restingIconStyle = useAnimatedStyle(() => ({ opacity: 1 - coverage.value }));
 
   return (
-    <TouchableOpacity
-      activeOpacity={GLASS_BUTTON_ACTIVE_OPACITY}
+    <Touchable
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       onPress={onPress}
+      ripple="borderless"
       style={styles.item}>
       {/*
         * Two stacked copies of the icon cross-faded by opacity, rather than one icon swapping its
@@ -91,7 +91,7 @@ export function NavBarItem({
       <Reanimated.View pointerEvents="none" style={[styles.iconLayer, activeIconStyle]}>
         <Icon name={icon} color={colors.icon.inverse} size={sizes.icon.md} />
       </Reanimated.View>
-    </TouchableOpacity>
+    </Touchable>
   );
 }
 

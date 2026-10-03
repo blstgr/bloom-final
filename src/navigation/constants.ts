@@ -10,6 +10,7 @@ export const SCREENS = {
   LOCATION_SEARCH: 'LocationSearch',
   MAIN_TABS: 'MainTabs',
   PLANT_DETAIL: 'PlantDetail',
+  PLANT_SEARCH: 'PlantSearch',
   SETTINGS_DRAWER: 'SettingsDrawer',
   SPECIES_INFO: 'SpeciesInfo',
   WATER: 'Water',

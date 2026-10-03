@@ -30,7 +30,9 @@ export const sizes = {
   },
   input: {
     height: 44,
-    heightLarge: 64,
+    /** A trailing action's slot: wider than tall, per Figma (`506:4569`), so the icon sits in a
+     * comfortable target at the pill's rounded end. */
+    actionWidth: 64,
   },
   modal: {
     maxWidth: 284,

@@ -37,47 +37,28 @@ function renderForPlatform(platform: 'android' | 'ios') {
   return renderer!.toJSON();
 }
 
-function renderComparableTree(platform: 'android' | 'ios') {
-  return stripPlatformShadowNodes(JSON.parse(JSON.stringify(renderForPlatform(platform))));
-}
-
+/**
+ * What a person can perceive and operate, in order: every accessible control's role and name, and
+ * every piece of text.
+ *
+ * The rendered trees themselves differ by design since docs/search-spec.md §4–5 — Android draws
+ * an opaque Material surface and a ripple where iOS draws glass and a fade — so the tree shape is no
+ * longer the thing to hold equal. What must stay equal is that both platforms offer the same
+ * controls with the same names.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function stripPlatformShadowNodes(node: any): any {
-  if (!node || typeof node !== 'object') return node;
-
-  const style = node.props?.style;
-  const serializedStyle = JSON.stringify(style) ?? '';
-  const isAbsoluteDecorativeLayer =
-    node.type === 'View' &&
-    serializedStyle.includes('"position":"absolute"') &&
-    (serializedStyle.includes('rgba(255, 255, 255, 0.2)') ||
-      serializedStyle.includes('rgba(255, 255, 255, 0.5)') ||
-      serializedStyle.includes('"backgroundColor":"#FFFFFF"') ||
-      node.props?.blurAmount === 4);
-
-  if (
-    isAbsoluteDecorativeLayer ||
-    (node.type === 'View' &&
-      serializedStyle.includes('"backgroundColor":"transparent"') &&
-      serializedStyle.includes('"overflow":"hidden"')) ||
-    (node.type === 'View' &&
-      node.props?.pointerEvents === 'none' &&
-      (serializedStyle.includes('rgba(43, 38, 31, 0.10)') ||
-        serializedStyle.includes('"elevation":3')))
-  ) {
-    return null;
+function collectPerceivable(node: any, out: string[] = []): string[] {
+  if (!node) return out;
+  if (typeof node === 'string') {
+    out.push(`text:${node}`);
+    return out;
   }
-
-  if (Array.isArray(node.children)) {
-    return {
-      ...node,
-      children: node.children
-        .map(stripPlatformShadowNodes)
-        .filter(Boolean),
-    };
+  if (node.props?.accessible && (node.props.accessibilityRole || node.props.accessibilityLabel)) {
+    out.push(`${node.props.accessibilityRole ?? 'none'}:${node.props.accessibilityLabel ?? ''}`);
   }
+  (node.children ?? []).forEach((child: unknown) => collectPerceivable(child, out));
 
-  return node;
+  return out;
 }
 
 describe('shared visual components', () => {
@@ -85,7 +66,10 @@ describe('shared visual components', () => {
     expect(renderForPlatform(platform)).toBeTruthy();
   });
 
-  it('keeps the same rendered tree shape on iOS and Android', () => {
-    expect(renderComparableTree('android')).toEqual(renderComparableTree('ios'));
+  it('offers the same controls and text on iOS and Android', () => {
+    const android = collectPerceivable(renderForPlatform('android'));
+
+    expect(android.length).toBeGreaterThan(0);
+    expect(android).toEqual(collectPerceivable(renderForPlatform('ios')));
   });
 });

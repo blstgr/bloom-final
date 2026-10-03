@@ -1,8 +1,9 @@
 import React from 'react';
-import { Platform, TextInput, TouchableOpacity } from 'react-native';
+import { Platform, TextInput } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 
 import { NavBar, type NavItem } from '../src/components/ui/NavBar';
+import { Touchable } from '../src/components/ui/Touchable';
 import { SettingsRow } from '../src/features/settings/components/SettingsPanel';
 import { WateringSchedule } from '../src/features/watering/components/WateringSchedule';
 import { WateringSlider } from '../src/features/watering/components/WateringSlider';
@@ -62,7 +63,7 @@ describe('dynamic components', () => {
       />,
     );
 
-    const button = renderer.root.findByType(TouchableOpacity);
+    const button = renderer.root.findByType(Touchable);
 
     ReactTestRenderer.act(() => {
       button.props.onPress();
@@ -74,7 +75,7 @@ describe('dynamic components', () => {
       input.props.onChangeText('human-who-waters-plants@gmail.com');
     });
 
-    const saveButton = renderer.root.findByType(TouchableOpacity);
+    const saveButton = renderer.root.findByType(Touchable);
 
     ReactTestRenderer.act(() => {
       saveButton.props.onPress();
@@ -104,7 +105,7 @@ describe('dynamic components', () => {
     }
 
     const renderer = renderOnPlatform(platform, <InteractiveNavBar />);
-    const navButtons = renderer.root.findAllByType(TouchableOpacity);
+    const navButtons = renderer.root.findAllByType(Touchable);
 
     expect(navButtons[0].props.accessibilityState.selected).toBe(true);
     expect(navButtons[1].props.accessibilityState.selected).toBe(false);
@@ -113,7 +114,7 @@ describe('dynamic components', () => {
       navButtons[1].props.onPress();
     });
 
-    const updatedButtons = renderer.root.findAllByType(TouchableOpacity);
+    const updatedButtons = renderer.root.findAllByType(Touchable);
 
     expect(updatedButtons[0].props.accessibilityState.selected).toBe(false);
     expect(updatedButtons[1].props.accessibilityState.selected).toBe(true);

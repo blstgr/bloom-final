@@ -7,6 +7,9 @@ const palette = {
   peach:  '#FBE5D8',
   peachDark: '#F3DED3',
   creamWarm: '#FCF2E6',
+  // What the Figma glass actually renders as over the app gradient, sampled from `506:4205`.
+  // Android has no glass (Material surfaces are opaque), so this is the colour it shows instead.
+  creamGlass: '#FBF3EC',
   cream:  '#EDE9E1',
   white:  '#FFFFFF',
 } as const;
@@ -32,13 +35,12 @@ export const colors = {
     creamWarm: palette.creamWarm,
     peachDark: palette.peachDark,
     glass: 'rgba(255, 255, 255, 0.5)',
+    /** The opaque stand-in for `glass` where translucency is not the platform's language. */
+    container: palette.creamGlass,
     dark:  palette.dark,
   },
   border: {
     white: palette.white,
-    // Semi-transparent white border for glass surfaces.
-    // Note: RN borderColor is a single value — gradient borders require a LinearGradient mask.
-    glass: 'rgba(255, 255, 255, 0.7)',
   },
   action: {
     primary:  palette.dark,
@@ -54,10 +56,9 @@ export const colors = {
   overlay: {
     dim:   'rgba(46, 43, 40, 0.18)',   // Loader dark overlay
     frost: 'rgba(255, 255, 255, 0.45)', // Loader light overlay
-    glass: 'rgba(255, 255, 255, 0.08)', // GlassView background/tint — kept low since the iOS
-                                         // system material this layers on already bakes in its
-                                         // own opacity; stacking a strong tint on top compounds.
     scrim: 'rgba(0, 0, 0, 0.2)',        // AlertModal backdrop
+    // Android press ripple: Material's pressed state layer is the content colour at ~12%.
+    ripple: 'rgba(46, 43, 40, 0.12)',
   },
 } as const;
 

@@ -43,7 +43,7 @@ export function WaterScreen({ navigation }: WaterScreenProps) {
           onRightPress={openSettings}
           rightIcon="more"
           rightLabel="Open settings"
-          title={scheduledPlants.length > 0 ? 'Needs Water' : undefined}
+          title={scheduledPlants.length > 0 ? 'Needs water' : undefined}
         />
       )}
       topActionsOverlay={scheduledPlants.length === 0}

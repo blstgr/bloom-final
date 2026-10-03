@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import Animated, {
   interpolateColor,
   useAnimatedStyle,
@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { colors, durations, opacities, radii, springs } from '../../../theme';
+import { Touchable } from '../Touchable';
 
 const TRACK_WIDTH = 52;
 const TRACK_HEIGHT = 32;
@@ -44,11 +45,12 @@ export type ToggleProps = {
 };
 
 /**
- * An on/off switch in Bloom's own design language.
+ * An on/off switch in Bloom's own design language, on both platforms.
  *
  * React Native's built-in `Switch` renders the platform control, which sits wrong next to the
- * cream-and-glass surfaces every other control here uses. Reanimated rather than `Animated`
- * because `docs/code-review.md` allows only one animation API per component.
+ * cream-and-glass surfaces every other control here uses — on Android too (user review,
+ * 2026-10-03, reversing the Material switch). Reanimated rather than `Animated` because
+ * `docs/code-review.md` allows only one animation API per component.
  *
  * The thumb travels on a spring so the throw has weight, while the track's colour runs on a
  * timing curve — springs cannot drive an interpolated colour, so the two are matched by eye to
@@ -98,7 +100,9 @@ export function Toggle({ accessibilityLabel, disabled = false, onValueChange, va
   };
 
   return (
-    <Pressable
+    // `ripple="none"`: the squash and the shake are this switch's press feedback, so the shared
+    // fade would only dim them.
+    <Touchable
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="switch"
       accessibilityState={{ checked: value, disabled }}
@@ -107,11 +111,12 @@ export function Toggle({ accessibilityLabel, disabled = false, onValueChange, va
       onPress={disabled ? undefined : () => onValueChange(!value)}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
+      ripple="none"
       style={disabled ? styles.disabled : undefined}>
       <Animated.View style={[styles.track, trackStyle]}>
         <Animated.View style={[styles.thumb, thumbStyle]} />
       </Animated.View>
-    </Pressable>
+    </Touchable>
   );
 }
 

@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { coordinateCacheKey } from '../../services/coordinateKey';
 import type { GeoLocation, WeatherForecast } from '../../services/types';
 import { getForecast, WeatherApiError } from '../../services/weatherApi';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -32,15 +33,8 @@ const WeatherContext = React.createContext<WeatherContextValue | null>(null);
 // every launch anyway — an hour is well inside the useful resolution and keeps the app off the
 // network on a quick reopen.
 const FORECAST_MAX_AGE_MS = ONE_HOUR_MS;
-// Two points closer than this share a forecast: Open-Meteo resolves to a weather grid, so more
-// precision would only fragment the cache without changing the answer.
-const COORDINATE_CACHE_PRECISION = 2;
-
 function getCacheKey(location: GeoLocation): string {
-  return [
-    location.latitude.toFixed(COORDINATE_CACHE_PRECISION),
-    location.longitude.toFixed(COORDINATE_CACHE_PRECISION),
-  ].join(',');
+  return coordinateCacheKey(location.latitude, location.longitude);
 }
 
 function toFailureReason(error: unknown): WeatherFailureReason {
@@ -53,6 +47,7 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
   const isEnabled = useAppSelector(selectWeatherAdjustmentEnabled);
   const isHydrated = useAppSelector(selectIsSettingsHydrated);
   const autoDetectLocation = useAppSelector(state => state.settings.autoDetectLocation);
+  const hasAnsweredLocationPrompt = useAppSelector(state => state.settings.hasAnsweredLocationPrompt);
 
   const [forecast, setForecast] = React.useState<WeatherForecast | null>(null);
   const [error, setError] = React.useState<WeatherFailureReason | null>(null);
@@ -82,8 +77,15 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
   // the switch still claimed to be detecting. Deliberately not a comparison against the stored
   // city — the device's position is the thing being asked for, and comparing names would mean
   // re-asking on every render whenever the two disagreed, which is exactly when they differ.
+  //
+  // And not before the location explainer has been answered: detecting asks for the permission,
+  // and the system dialog must never arrive ahead of the reason for it (docs/search-spec.md §8).
   const shouldDetect =
-    isHydrated && isEnabled && autoDetectLocation && !hasAttemptedDetection;
+    isHydrated &&
+    hasAnsweredLocationPrompt &&
+    isEnabled &&
+    autoDetectLocation &&
+    !hasAttemptedDetection;
 
   // Switching detection off arms it to run again on the way back on, so a user who travels can
   // re-detect without relaunching.

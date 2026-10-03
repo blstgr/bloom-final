@@ -1,5 +1,9 @@
-import type { OpenMeteoForecastResponse, OpenMeteoGeocodingResponse } from './types';
-import { getForecast, reverseGeocode, searchLocations } from './weatherApi';
+import type {
+  OpenMeteoArchiveResponse,
+  OpenMeteoForecastResponse,
+  OpenMeteoGeocodingResponse,
+} from './types';
+import { getForecast, getLocationClimate, reverseGeocode, searchLocations } from './weatherApi';
 
 function mockFetchOnce(response: Partial<Response>) {
   global.fetch = jest.fn().mockResolvedValueOnce(response) as unknown as typeof fetch;
@@ -20,6 +24,7 @@ describe('searchLocations', () => {
         {
           admin1: 'Kyiv City',
           country: 'Ukraine',
+          feature_code: 'PPLC',
           id: 703448,
           latitude: 50.45,
           longitude: 30.52,
@@ -41,6 +46,26 @@ describe('searchLocations', () => {
         timezone: 'Europe/Kyiv',
       },
     ]);
+  });
+
+  it('keeps towns and cities only, one row per name', async () => {
+    const place = { country: 'Ukraine', latitude: 0, longitude: 0, timezone: 'Europe/Kyiv' };
+    const payload: OpenMeteoGeocodingResponse = {
+      results: [
+        { ...place, feature_code: 'PPLC', id: 1, name: 'Kyiv', population: 2952301 },
+        { ...place, feature_code: 'PPL', id: 2, name: 'Kyiv', population: 108 },
+        { ...place, feature_code: 'PPLX', id: 3, name: 'Kyivskyi', population: 139177 },
+        { ...place, feature_code: 'PPL', id: 4, name: 'Kyivske', population: 76 },
+        { ...place, feature_code: 'PPL', id: 5, name: 'Kyivske' },
+        { ...place, feature_code: 'PPLA2', id: 6, name: 'Bila Tserkva' },
+        { ...place, feature_code: 'PPL', id: 7, name: 'Irpin', population: 62456 },
+      ],
+    };
+    mockFetchOnce({ json: () => Promise.resolve(payload), ok: true });
+
+    const names = (await searchLocations('Ky')).map(location => location.locationId);
+
+    expect(names).toEqual(['1', '6', '7']);
   });
 
   it('treats an omitted results field as no matches', async () => {
@@ -181,5 +206,45 @@ describe('reverseGeocode', () => {
       latitude: 49.9935,
       name: 'Current location',
     });
+  });
+});
+
+describe('getLocationClimate', () => {
+  const payload: OpenMeteoArchiveResponse = {
+    daily: {
+      relative_humidity_2m_mean: [80, 60, null, 70],
+      temperature_2m_min: [-10, -4, -22, null],
+      time: ['2023-01-10', '2023-07-10', '2024-01-10', '2025-01-10'],
+    },
+    latitude: 50.45,
+    longitude: 30.52,
+  };
+
+  it('asks for the last three complete years', async () => {
+    mockFetchOnce({ json: () => Promise.resolve(payload), ok: true });
+
+    await getLocationClimate(50.45, 30.52, new Date('2026-10-03T00:00:00Z'));
+
+    expect(lastRequestedUrl()).toContain('start_date=2023-01-01&end_date=2025-12-31');
+    expect(lastRequestedUrl()).toContain('daily=temperature_2m_min,relative_humidity_2m_mean');
+  });
+
+  it("takes each year's coldest night and the mean humidity, skipping gaps", async () => {
+    mockFetchOnce({ json: () => Promise.resolve(payload), ok: true });
+
+    await expect(getLocationClimate(50.45, 30.52, new Date('2026-10-03T00:00:00Z'))).resolves.toEqual({
+      annualMinimumsC: [-10, -22],
+      humidityMean: 70,
+      latitude: 50.45,
+    });
+  });
+
+  it('fails rather than inventing a climate when the archive has no data', async () => {
+    mockFetchOnce({
+      json: () => Promise.resolve({ ...payload, daily: { relative_humidity_2m_mean: [], temperature_2m_min: [], time: [] } }),
+      ok: true,
+    });
+
+    await expect(getLocationClimate(0, 0)).rejects.toMatchObject({ kind: 'unknown' });
   });
 });

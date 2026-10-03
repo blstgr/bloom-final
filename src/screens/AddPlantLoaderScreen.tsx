@@ -41,7 +41,6 @@ export function AddPlantLoaderScreen({
     getDetectionById,
     identifyAndResolveSpecies,
     resolveDetectionSpecies,
-    setPendingLibrarySearch,
   } = usePlantData();
   const captureId = route.params?.captureId;
   const mode = route.params?.mode;
@@ -71,12 +70,8 @@ export function AddPlantLoaderScreen({
       resolveDetectionSpecies(detection.detectionId, result.species);
 
       if (mode === 'search') {
-        // Prefills the Library search box for whenever the user closes the article and lands
-        // back on it — no need to auto-focus, so no timing race with the screen transition.
-        setPendingLibrarySearch(result.species.speciesName);
-        // This flow never passes through the Library's own result rows (handleOpenSpecies),
-        // so the detected species has to be recorded here instead, or it would never show
-        // up in search history.
+        // This flow never passes through plant search's own result rows, so the detected
+        // species is recorded here instead, or it would never show up in recent searches.
         addSearchHistoryEntry(result.species);
         // Replaces the camera stack in place (rather than pushing on top of it), so closing
         // the article naturally returns to the screen the camera flow was launched from.
@@ -100,7 +95,6 @@ export function AddPlantLoaderScreen({
     mode,
     navigation,
     resolveDetectionSpecies,
-    setPendingLibrarySearch,
   ]);
 
   const handleRetake = React.useCallback(() => {

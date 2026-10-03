@@ -10,7 +10,8 @@
 import { searchSpecies } from '../../../services/plantApi';
 import type { PerenualSpeciesListItem } from '../../../services/types';
 
-import { mockSpecies } from './mockPlants';
+import { catalogSpecies } from './catalog';
+import { toDisplaySpeciesName } from './speciesName';
 
 const MAX_RESULTS = 8;
 // Perenual answers in roughly 1-3s and the figure moves hour to hour, so repeating a query the
@@ -91,13 +92,13 @@ export function searchSeedSpecies(query: string): SpeciesSearchResult[] {
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return [];
 
-  return mockSpecies
+  return catalogSpecies
     .map(species => {
       const rank = rankByName(species.speciesName, normalizedQuery);
 
       return rank === null ? null : { rank, species };
     })
-    .filter((entry): entry is { rank: number; species: (typeof mockSpecies)[number] } => entry !== null)
+    .filter((entry): entry is { rank: number; species: (typeof catalogSpecies)[number] } => entry !== null)
     .sort((a, b) => a.rank - b.rank)
     .map(entry => ({ speciesId: entry.species.speciesId, speciesName: entry.species.speciesName }))
     .slice(0, MAX_RESULTS);
@@ -138,7 +139,7 @@ export async function searchSpeciesByRelevance(query: string): Promise<SpeciesSe
     .map(item => ({ item, rank: rankByRelevance(item, normalizedQuery) }))
     .filter((entry): entry is { item: PerenualSpeciesListItem; rank: number } => entry.rank !== null)
     .sort((a, b) => a.rank - b.rank)
-    .map(entry => ({ speciesId: String(entry.item.id), speciesName: entry.item.common_name }))
+    .map(entry => ({ speciesId: String(entry.item.id), speciesName: toDisplaySpeciesName(entry.item.common_name) }))
     .slice(0, MAX_RESULTS);
 
   writeCache(normalizedQuery, results);
@@ -147,7 +148,7 @@ export async function searchSpeciesByRelevance(query: string): Promise<SpeciesSe
 }
 
 /**
- * Seed matches first, then any Perenual result that is not already in the list by name.
+ * Seed matches first, then each Perenual result whose name is not already in the list.
  *
  * Deduplicating on name rather than id is deliberate: the same plant carries a seed slug locally
  * and a Perenual number remotely, so ids can never match even when the rows are the same plant.
@@ -157,9 +158,15 @@ export function mergeSearchResults(
   remoteResults: SpeciesSearchResult[],
 ): SpeciesSearchResult[] {
   const seenNames = new Set(seedResults.map(result => result.speciesName.toLowerCase()));
+  // Remote against remote too: Perenual lists several species under one common name ("Zebra
+  // plant" twice), and two identical rows read as a bug. The first, most relevant, one stays.
+  const uniqueRemote = remoteResults.filter(result => {
+    const name = result.speciesName.toLowerCase();
+    if (seenNames.has(name)) return false;
+    seenNames.add(name);
 
-  return [
-    ...seedResults,
-    ...remoteResults.filter(result => !seenNames.has(result.speciesName.toLowerCase())),
-  ].slice(0, MAX_RESULTS);
+    return true;
+  });
+
+  return [...seedResults, ...uniqueRemote].slice(0, MAX_RESULTS);
 }

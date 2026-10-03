@@ -11,6 +11,7 @@ export type {
   LibraryScreenProps,
   LocationSearchScreenProps,
   PlantDetailScreenProps,
+  PlantSearchScreenProps,
   RootNavigation,
   RootStackParamList,
   SettingsDrawerParamList,
@@ -19,5 +20,6 @@ export type {
   WaterScreenProps,
 } from './types';
 export { MainTabBar } from './MainTabBar';
+export * from './useFocusOnArrival';
 export * from './useIsScreenFocused';
 export * from './useTabScreenNavigation';

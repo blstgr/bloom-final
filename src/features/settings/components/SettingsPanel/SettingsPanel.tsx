@@ -2,7 +2,8 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Button } from '../../../../components/ui/Button';
-import { colors, radii, shadows, sizes, spacing } from '../../../../theme';
+import { GlassView } from '../../../../components/ui/GlassView';
+import { colors, radii, sizes, spacing } from '../../../../theme';
 
 import { SettingsRow, type SettingsRowProps } from './SettingsRow';
 
@@ -15,9 +16,9 @@ export function SettingsPanel({ onLogoutPress, rows }: SettingsPanelProps) {
   const rowKeyCounts = new Map<string, number>();
 
   return (
-    // Outer view holds the border and shadow — no overflow:hidden so the border isn't clipped.
-    // Inner view clips row content to the rounded corners.
-    <View style={styles.border}>
+    // The panel is the shared floating surface: glass on iOS, an opaque Material surface on
+    // Android. The inner view clips row content to the rounded corners.
+    <GlassView radius={radii.xxl} style={styles.panel}>
       <View style={styles.inner}>
         {rows.map(row => {
           // Only `variant` is common to every row shape, so the rest of the key is read
@@ -36,17 +37,12 @@ export function SettingsPanel({ onLogoutPress, rows }: SettingsPanelProps) {
           </View>
         ) : null}
       </View>
-    </View>
+    </GlassView>
   );
 }
 
 const styles = StyleSheet.create({
-  border: {
-    ...shadows.soft,
-    backgroundColor: colors.surface.glass,
-    borderColor: colors.border.glass,
-    borderRadius: radii.xxl,
-    borderWidth: sizes.border.thin,
+  panel: {
     width: '100%',
   },
   inner: {

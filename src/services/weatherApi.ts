@@ -1,4 +1,5 @@
 import {
+  OPEN_METEO_ARCHIVE_BASE_URL,
   OPEN_METEO_FORECAST_BASE_URL,
   OPEN_METEO_GEOCODING_BASE_URL,
   REVERSE_GEOCODING_URL,
@@ -7,6 +8,8 @@ import { readResponseBody, TOO_MANY_REQUESTS_STATUS } from './http';
 import type {
   BigDataCloudReverseGeocodeResponse,
   GeoLocation,
+  LocationClimate,
+  OpenMeteoArchiveResponse,
   OpenMeteoForecastResponse,
   OpenMeteoGeocodingResponse,
   WeatherForecast,
@@ -28,6 +31,14 @@ export class WeatherApiError extends Error {
 // time the app opens, so a longer window would only average away the conditions that matter now.
 const FORECAST_DAYS = 7;
 const GEOCODING_RESULT_COUNT = 8;
+// Asked for generously, because the town filter below discards villages and districts and the
+// list should still fill.
+const GEOCODING_REQUEST_COUNT = 30;
+// Below this a place is a village, and it shows up in droves: "Kyiv" also matches a 108-person
+// Kyiv and three 34-to-76-person Kyivskes. The forecast for a village is the nearby town's anyway.
+const MIN_TOWN_POPULATION = 1000;
+const CAPITAL_OR_SEAT = /^PPL(C|A\d?)$/;
+const DISTRICT_FEATURE = 'PPLX';
 
 async function fetchOpenMeteo<T>(url: string): Promise<T> {
   let response: Response;
@@ -68,11 +79,29 @@ export async function searchLocations(name: string): Promise<GeoLocation[]> {
   if (!query) return [];
 
   const response = await fetchOpenMeteo<OpenMeteoGeocodingResponse>(
-    `${OPEN_METEO_GEOCODING_BASE_URL}/search?name=${query}&count=${GEOCODING_RESULT_COUNT}&language=en&format=json`,
+    `${OPEN_METEO_GEOCODING_BASE_URL}/search?name=${query}&count=${GEOCODING_REQUEST_COUNT}&language=en&format=json`,
   );
 
+  // Towns and cities only, one row per name. A capital or administrative seat always counts; a
+  // district of a city (PPLX) never does — its city is the place someone lives; anything else
+  // needs a known population of a town. Same-named survivors collapse to the first, which
+  // Open-Meteo has already ranked by population: the list shows names alone, so two "Kyiv" rows
+  // could not be told apart anyway.
+  const seenNames = new Set<string>();
+  const towns = (response.results ?? []).filter(result => {
+    const code = result.feature_code ?? '';
+    const isTown =
+      CAPITAL_OR_SEAT.test(code) ||
+      (code !== DISTRICT_FEATURE && (result.population ?? 0) >= MIN_TOWN_POPULATION);
+    const nameKey = result.name.toLowerCase();
+    if (!isTown || seenNames.has(nameKey)) return false;
+    seenNames.add(nameKey);
+
+    return true;
+  });
+
   // Open-Meteo omits `results` entirely rather than returning an empty array when nothing matches.
-  return (response.results ?? []).map(result => ({
+  return towns.slice(0, GEOCODING_RESULT_COUNT).map(result => ({
     admin1: result.admin1,
     country: result.country,
     latitude: result.latitude,
@@ -171,5 +200,54 @@ export async function getForecast(latitude: number, longitude: number): Promise<
     latitude: response.latitude,
     longitude: response.longitude,
     timezone: response.timezone,
+  };
+}
+
+// Three full years: one is too noisy for a hardiness zone (a single mild winter shifts it), and
+// more buys little for a ranking that only uses the zone as a tie-breaker.
+const CLIMATE_YEARS = 3;
+const YEAR_PREFIX_LENGTH = 4;
+
+/**
+ * GET archive?daily=temperature_2m_min,relative_humidity_2m_mean — the last few complete years.
+ *
+ * Complete calendar years only, so every year contributes a whole winter to its minimum and the
+ * archive's few-day publishing lag never truncates the current one.
+ */
+export async function getLocationClimate(latitude: number, longitude: number, now = new Date()): Promise<LocationClimate> {
+  const lastYear = now.getFullYear() - 1;
+  const firstYear = lastYear - CLIMATE_YEARS + 1;
+  const response = await fetchOpenMeteo<OpenMeteoArchiveResponse>(
+    `${OPEN_METEO_ARCHIVE_BASE_URL}/archive?latitude=${latitude}&longitude=${longitude}` +
+      `&start_date=${firstYear}-01-01&end_date=${lastYear}-12-31` +
+      '&daily=temperature_2m_min,relative_humidity_2m_mean&timezone=auto',
+  );
+
+  const minimumsByYear = new Map<string, number>();
+  let humiditySum = 0;
+  let humidityCount = 0;
+
+  response.daily.time.forEach((date, index) => {
+    const minimum = response.daily.temperature_2m_min[index];
+    const humidity = response.daily.relative_humidity_2m_mean[index];
+    const year = date.slice(0, YEAR_PREFIX_LENGTH);
+
+    if (minimum != null) {
+      minimumsByYear.set(year, Math.min(minimumsByYear.get(year) ?? minimum, minimum));
+    }
+    if (humidity != null) {
+      humiditySum += humidity;
+      humidityCount += 1;
+    }
+  });
+
+  if (minimumsByYear.size === 0 || humidityCount === 0) {
+    throw new WeatherApiError('unknown', 'The climate archive returned no data for this location.');
+  }
+
+  return {
+    annualMinimumsC: [...minimumsByYear.keys()].sort().map(year => minimumsByYear.get(year) as number),
+    humidityMean: humiditySum / humidityCount,
+    latitude: response.latitude,
   };
 }

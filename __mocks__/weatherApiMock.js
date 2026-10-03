@@ -18,5 +18,9 @@ module.exports = {
     longitude: 0,
     timezone: 'UTC',
   })),
+  // Rejecting keeps the Library grid on its no-location list, the same answer the tests' absent
+  // location already produces.
+  getLocationClimate: jest.fn(() => Promise.reject(new WeatherApiError('network', 'offline'))),
+  reverseGeocode: jest.fn(() => Promise.resolve(null)),
   searchLocations: jest.fn(() => Promise.resolve([])),
 };

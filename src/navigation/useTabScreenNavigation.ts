@@ -53,6 +53,10 @@ export function useTabScreenNavigation(navigation: TabNavigation) {
     });
   }, [rootNavigation]);
 
+  const openPlantSearch = React.useCallback(() => {
+    rootNavigation?.navigate(SCREENS.PLANT_SEARCH);
+  }, [rootNavigation]);
+
   const openPlantDetail = React.useCallback(
     (ownedPlantId: string) => {
       rootNavigation?.navigate(SCREENS.PLANT_DETAIL, { ownedPlantId });
@@ -72,6 +76,7 @@ export function useTabScreenNavigation(navigation: TabNavigation) {
     openAddPlant,
     openAddPlantPhotoSearch,
     openPlantDetail,
+    openPlantSearch,
     openSettings,
     openSpeciesInfo,
   };

@@ -5,6 +5,9 @@ export const UNSPLASH_BASE_URL = 'https://api.unsplash.com';
 // Open-Meteo needs no API key at all, which is why it is the one service here with nothing in
 // config.ts. Forecast and geocoding live on separate hosts.
 export const OPEN_METEO_FORECAST_BASE_URL = 'https://api.open-meteo.com/v1';
+// Historical reanalysis (ERA5). Keyless like the forecast; read for a location's climate, not its
+// weather this week.
+export const OPEN_METEO_ARCHIVE_BASE_URL = 'https://archive-api.open-meteo.com/v1';
 export const OPEN_METEO_GEOCODING_BASE_URL = 'https://geocoding-api.open-meteo.com/v1';
 // Open-Meteo's geocoder only goes name -> coordinates. Device location arrives as coordinates and
 // still needs a city name to show, so reverse lookups go to BigDataCloud's keyless client

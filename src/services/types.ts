@@ -92,6 +92,25 @@ export type UnsplashSearchResponse = {
 
 // --- Open-Meteo ------------------------------------------------------------
 
+/** A location's climate over the last few years — what decides which houseplants suit it. */
+export type LocationClimate = {
+  /** The coldest daily minimum of each complete calendar year, oldest first. */
+  annualMinimumsC: number[];
+  /** Mean daily relative humidity across the whole period, in percent. */
+  humidityMean: number;
+  latitude: number;
+};
+
+export type OpenMeteoArchiveResponse = {
+  daily: {
+    relative_humidity_2m_mean: Array<number | null>;
+    temperature_2m_min: Array<number | null>;
+    time: string[];
+  };
+  latitude: number;
+  longitude: number;
+};
+
 /** A place the forecast can be fetched for, however it was chosen. */
 export type GeoLocation = {
   /** Region/state, kept because same-named cities are common ("Springfield"). */
@@ -129,10 +148,15 @@ export type OpenMeteoGeocodingResponse = {
   results?: Array<{
     admin1?: string;
     country: string;
+    /** GeoNames feature class: PPLC capital, PPLA..PPLA4 administrative seats, PPL a plain
+     * populated place, PPLX a section of one (a district). */
+    feature_code?: string;
     id: number;
     latitude: number;
     longitude: number;
     name: string;
+    /** Omitted when GeoNames does not know it, which is common for villages. */
+    population?: number;
     timezone: string;
   }>;
 };

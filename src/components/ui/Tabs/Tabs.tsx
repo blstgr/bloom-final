@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, type LayoutChangeEvent } from 'react-native';
+import { Platform, ScrollView, StyleSheet, type LayoutChangeEvent } from 'react-native';
 import Reanimated, {
   Extrapolation,
   interpolate,
@@ -10,14 +10,18 @@ import Reanimated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { colors, durations, fontFamilies, radii, spacing } from '../../../theme';
+import { colors, durations, radii, sizes, spacing } from '../../../theme';
 import { AppText } from '../AppText';
-import { GLASS_BUTTON_ACTIVE_OPACITY } from '../Button';
+import { GlassView } from '../GlassView';
 import { useSlidingIndicator } from '../SlidingIndicator';
+import { Touchable, type TouchableRipple } from '../Touchable';
 
-// Vertical padding + the body variant's line height (typography.body.lineHeight, 26) sum to the
-// Figma spec's 32px badge height, rather than a separately hardcoded height.
-const TAB_VERTICAL_PADDING = 3;
+// Figma `506:4226`: 11 either side of the label. Not a spacing token — it is what centres a
+// 17/26 label in a chip whose height is the 44pt tap minimum, not a rhythm value.
+const TAB_HORIZONTAL_PADDING = 11;
+// A ripple on Android; nothing extra on iOS, where the chip's press-scale is the feedback. The iOS
+// fade would dim the glass's parent, and Liquid Glass breaks under any superview alpha below 1.
+const CHIP_PRESS_FEEDBACK: TouchableRipple = Platform.OS === 'android' ? 'bounded' : 'none';
 const TAB_RESTING_SCALE = 1;
 const TAB_PRESSED_SCALE = 0.94;
 const ACTIVE = 1;
@@ -37,6 +41,10 @@ export type TabsProps<Key extends string = string> = {
   // isn't one of the tab keys just widens `Key` to include it instead of failing to compile —
   // which silently yields a tab bar with nothing selected.
   activeKey: NoInfer<Key>;
+  /** The horizontal padding of the column the row sits in. The row bleeds through it to the screen
+   * edges, so chips scroll off the edge of the screen rather than being cut at the padding, while
+   * the first chip still lines up with the column at rest. */
+  edgeInset?: number;
   onTabPress: (key: NoInfer<Key>) => void;
   tabs: TabItem<Key>[];
 };
@@ -82,15 +90,9 @@ function TabButton<Key extends string>({
     ],
   }));
 
-  // The chip's own white surface fades out as it becomes active, letting the shared dark pill
-  // behind the row show through. Fading the surface rather than drawing the pill on top is what
-  // lets the pill travel without covering the labels of the chips it passes over — the trick the
-  // reference implementation uses a clip-path for, which React Native has no equivalent of.
-  const surfaceStyle = useAnimatedStyle(() => ({ opacity: 1 - activeProgress.value }));
-
-  // `text.inverse` and `surface.white` are both #FFFFFF, so a one-frame colour flip would leave
-  // the newly selected chip white-on-white — and the deselected one dark-on-dark — while the
-  // pill is still travelling. Cross-fading on the same curve avoids both.
+  // A one-frame colour flip would leave the newly selected chip white-on-light — and the
+  // deselected one dark-on-dark — while the pill is still travelling. Cross-fading on the same
+  // curve avoids both.
   const labelStyle = useAnimatedStyle(() => ({
     color: interpolateColor(
       activeProgress.value,
@@ -112,34 +114,49 @@ function TabButton<Key extends string>({
   }, [pressProgress]);
 
   return (
-    <TouchableOpacity
+    <Touchable
       accessibilityRole="tab"
       accessibilityState={{ selected: isActive }}
-      activeOpacity={GLASS_BUTTON_ACTIVE_OPACITY}
       onLayout={handleLayout}
       onPress={handlePress}
       onPressIn={handlePressIn}
-      onPressOut={handlePressOut}>
+      onPressOut={handlePressOut}
+      ripple={CHIP_PRESS_FEEDBACK}
+      style={styles.touchable}>
       <Reanimated.View style={[styles.tab, pressStyle]}>
-        <Reanimated.View pointerEvents="none" style={[styles.tabSurface, surfaceStyle]} />
-        <ReanimatedAppText style={[styles.tabLabel, labelStyle]} variant="body">
+        {/*
+          * The chip's own glass surface fades out as it becomes active, letting the shared dark
+          * pill behind the row show through. Fading the surface rather than drawing the pill on top
+          * is what lets the pill travel without covering the labels of the chips it passes over —
+          * the trick the reference implementation uses a clip-path for, which React Native has no
+          * equivalent of. GlassView does the fading: an opacity here, on the glass's parent, would
+          * break Liquid Glass.
+          */}
+        <GlassView shadow={false} style={StyleSheet.absoluteFill} visible={!isActive} />
+        {/* The button variant: a chip is a control, and every control label is Satoshi Black. */}
+        <ReanimatedAppText style={labelStyle} variant="button">
           {label}
         </ReanimatedAppText>
       </Reanimated.View>
-    </TouchableOpacity>
+    </Touchable>
   );
 }
 
-export function Tabs<Key extends string = string>({ activeKey, onTabPress, tabs }: TabsProps<Key>) {
+export function Tabs<Key extends string = string>({
+  activeKey,
+  edgeInset = 0,
+  onTabPress,
+  tabs,
+}: TabsProps<Key>) {
   const { indicatorStyle, onItemLayout } = useSlidingIndicator(activeKey, tabs.map(tab => tab.key));
 
   return (
     <ScrollView
       accessibilityRole="tablist"
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingHorizontal: edgeInset }]}
       horizontal
       showsHorizontalScrollIndicator={false}
-      style={styles.scroll}>
+      style={[styles.scroll, { marginHorizontal: -edgeInset }]}>
       {/*
         * Lives inside the scroll content rather than beside it, so it travels with the chips when
         * the row scrolls and needs no scroll-offset correction. Rendered first to sit underneath:
@@ -176,24 +193,19 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 0,
   },
+  // minHeight rather than height: the label scales with the OS text size, and a fixed height
+  // would clip it at the larger accessibility sizes.
   tab: {
+    alignItems: 'center',
     borderRadius: radii.pill,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: TAB_VERTICAL_PADDING,
+    justifyContent: 'center',
+    minHeight: sizes.button.small,
+    minWidth: sizes.button.small,
+    paddingHorizontal: TAB_HORIZONTAL_PADDING,
   },
-  // Figma specs Satoshi Black for this label; only Satoshi-Medium and Satoshi-Bold are bundled in
-  // this project, so Bold is the closest available match — kept as a style override rather than a
-  // new AppText variant since no other text in the app uses this size/weight combination.
-  tabLabel: {
-    fontFamily: fontFamilies.bodyBold,
-  },
-  tabSurface: {
-    backgroundColor: colors.surface.white,
+  // Clips the Android ripple to the pill instead of its bounding rectangle.
+  touchable: {
     borderRadius: radii.pill,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
+    overflow: 'hidden',
   },
 });

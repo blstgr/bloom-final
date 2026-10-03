@@ -76,7 +76,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
           onRightPress={openSettings}
           rightIcon="more"
           rightLabel="Open settings"
-          title={plants.length > 0 ? 'Plant Situation' : undefined}
+          title={plants.length > 0 ? 'Plant situation' : undefined}
         />
       )}
       topActionsOverlay={plants.length === 0}

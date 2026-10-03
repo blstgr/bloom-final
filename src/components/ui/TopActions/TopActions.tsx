@@ -2,7 +2,6 @@ import React from 'react';
 import { type ReactNode } from 'react';
 import {
   StyleSheet,
-  TouchableOpacity,
   View,
   type AccessibilityState,
   type StyleProp,
@@ -11,8 +10,9 @@ import {
 
 import { colors, radii, sizes, spacing } from '../../../theme';
 import { AppText } from '../AppText';
-import { GlassButtonSurface, GLASS_BUTTON_ACTIVE_OPACITY } from '../Button';
+import { GlassView } from '../GlassView';
 import { Icon, type IconName } from '../Icon';
+import { Touchable } from '../Touchable';
 
 type TopActionsBaseProps = {
   onMore?: () => void;
@@ -44,8 +44,6 @@ type HeroTopActionsProps = TopActionsBaseProps & {
 
 export type TopActionsProps = CenteredTopActionsProps | HeroTopActionsProps;
 
-const TOP_ACTION_GLASS_COLOR = colors.overlay.glass;
-const TOP_ACTION_RADIUS_RATIO = 0.5;
 const HERO_TITLE_WIDTH = 198;
 
 function TopActionButton({
@@ -60,20 +58,18 @@ function TopActionButton({
   onPress?: () => void;
 }) {
   return (
-    <GlassButtonSurface
-      glassColor={TOP_ACTION_GLASS_COLOR}
-      radius={sizes.button.small * TOP_ACTION_RADIUS_RATIO}
-      style={styles.topActionButtonWrap}>
-      <TouchableOpacity
+    // No shadow: Figma's round secondary button (`506:4211`) carries the glass and rim only.
+    <GlassView shadow={false} style={styles.topActionButtonWrap}>
+      <Touchable
         accessibilityLabel={label}
         accessibilityRole="button"
         accessibilityState={accessibilityState}
-        activeOpacity={GLASS_BUTTON_ACTIVE_OPACITY}
         onPress={onPress}
+        ripple="borderless"
         style={styles.topActionButton}>
         <Icon color={colors.icon.primary} name={icon} size={sizes.icon.md} />
-      </TouchableOpacity>
-    </GlassButtonSurface>
+      </Touchable>
+    </GlassView>
   );
 }
 
@@ -187,7 +183,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     height: sizes.button.small,
     justifyContent: 'center',
-    overflow: 'visible',
     width: sizes.button.small,
   },
   titleWrap: {

@@ -1,19 +1,13 @@
 import React from 'react';
-import {
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
-  type GestureResponderEvent,
-} from 'react-native';
+import { StyleSheet, TextInput, View, type GestureResponderEvent } from 'react-native';
 
 import { colors, radii, sizes, spacing, typography } from '../../../theme';
 import { AppText } from '../AppText';
 import { GlassView } from '../GlassView';
 import { Icon, type IconName, type IconSize } from '../Icon';
+import { Touchable } from '../Touchable';
 
 export type InputType = 'text' | 'email' | 'password' | 'number';
-export type InputSize = 'default' | 'large';
 
 export type InputAction = {
   accessibilityLabel: string;
@@ -26,50 +20,74 @@ export type InputAction = {
 
 export type InputActions = [] | [InputAction] | [InputAction, InputAction];
 
-export type InputProps = {
+type InputBaseProps = {
   accessibilityLabel?: string;
   actions?: InputActions;
-  /** Raises the keyboard on mount. For a screen whose only purpose is the search it contains. */
-  autoFocus?: boolean;
   disabled?: boolean;
   error?: string;
   leadingIcon?: IconName;
   leadingIconSize?: IconSize;
   labelIcon?: IconName;
   label?: string;
+  placeholder?: string;
+};
+
+type EditableInputProps = InputBaseProps & {
+  /** Raises the keyboard on mount. For a screen whose only purpose is the search it contains. */
+  autoFocus?: boolean;
+  /** The underlying field, for a caller that has to focus it at a moment of its own choosing
+   * (after a screen transition, where a mount-time `autoFocus` loses the keyboard on Android). */
+  inputRef?: React.Ref<TextInput>;
   onBlur?: () => void;
   onChangeText: (value: string) => void;
   onFocus?: () => void;
-  placeholder?: string;
-  size?: InputSize;
+  onPress?: never;
   type?: InputType;
   value: string;
 };
 
-export function Input({
-  accessibilityLabel,
-  actions = [],
-  autoFocus = false,
-  disabled = false,
-  error,
-  leadingIcon,
-  leadingIconSize = 'sm',
-  labelIcon,
-  label,
-  onBlur,
-  onChangeText,
-  onFocus,
-  placeholder,
-  size = 'default',
-  type = 'text',
-  value,
-}: InputProps) {
-  const [isFocused, setIsFocused] = React.useState(false);
-  const inputRef = React.useRef<TextInput>(null);
+/**
+ * The field as a button: it shows the placeholder and opens the real input somewhere else (the
+ * Library search bar opens the search screen). Taking `onPress` rules out `value` and
+ * `onChangeText`, so a trigger cannot be half-wired as an editable field that never edits.
+ */
+type TriggerInputProps = InputBaseProps & {
+  autoFocus?: never;
+  inputRef?: never;
+  onBlur?: never;
+  onChangeText?: never;
+  onFocus?: never;
+  onPress: () => void;
+  type?: never;
+  value?: never;
+};
+
+export type InputProps = EditableInputProps | TriggerInputProps;
+
+const MAX_INPUT_ACTIONS = 2;
+const DISABLED_INPUT_OPACITY = 0.64;
+
+export function Input(props: InputProps) {
+  const {
+    accessibilityLabel,
+    actions = [],
+    disabled = false,
+    error,
+    leadingIcon,
+    leadingIconSize = 'sm',
+    labelIcon,
+    label,
+    placeholder,
+  } = props;
   const visibleActions = actions.slice(0, MAX_INPUT_ACTIONS);
   const resolvedAccessibilityLabel = firstNonEmptyText(accessibilityLabel, label, placeholder) ?? 'Input';
   const hasLabelRow = firstNonEmptyText(label) != null || labelIcon != null;
-  const isLarge = size === 'large';
+  const textStyle = [
+    styles.input,
+    !leadingIcon && styles.inputLeadingPadding,
+    visibleActions.length === 0 && styles.inputTrailingPadding,
+    disabled && styles.inputDisabled,
+  ];
 
   return (
     <View style={styles.container}>
@@ -79,72 +97,52 @@ export function Input({
           {label ? <AppText variant="titleS">{label}</AppText> : null}
         </View>
       ) : null}
-      <GlassView
-        fallbackColor={isFocused ? colors.surface.peachDark : colors.surface.creamWarm}
-        radius={radii.pill}
-        shadow={false}
-        style={styles.inputShadowWrap}
-        tintColor={isFocused ? colors.surface.peachDark : colors.surface.creamWarm}
-      >
+      <GlassView radius={radii.pill}>
         <View
           style={[
             styles.inputWrapper,
-            isLarge && styles.inputWrapperLarge,
             Boolean(error) && styles.inputWrapperError,
             disabled && styles.inputWrapperDisabled,
           ]}>
-          {leadingIcon ? (
-            <View style={isLarge ? styles.leadingIconSlotLarge : styles.leadingIconSlot}>
-              <Icon
-                color={disabled ? colors.action.disabled : colors.icon.primary}
-                name={leadingIcon}
-                size={leadingIconSize}
+          {props.onPress ? (
+            // The whole bar opens the search except the trailing actions, which keep their own
+            // targets (e.g. the camera opens photo search, not text search).
+            <Touchable
+              accessibilityLabel={resolvedAccessibilityLabel}
+              accessibilityRole="search"
+              accessibilityState={{ disabled }}
+              disabled={disabled}
+              onPress={props.onPress}
+              style={[styles.triggerArea, visibleActions.length === 0 && styles.triggerAreaOuter]}>
+              {leadingIcon ? <LeadingIcon disabled={disabled} icon={leadingIcon} size={leadingIconSize} /> : null}
+              <AppText numberOfLines={1} style={[textStyle, styles.placeholder]}>
+                {placeholder}
+              </AppText>
+            </Touchable>
+          ) : (
+            <>
+              {leadingIcon ? <LeadingIcon disabled={disabled} icon={leadingIcon} size={leadingIconSize} /> : null}
+              <EditableField
+                {...props}
+                accessibilityLabel={resolvedAccessibilityLabel}
+                disabled={disabled}
+                style={textStyle}
               />
-            </View>
-          ) : null}
-          <TextInput
-            ref={inputRef}
-            accessibilityLabel={resolvedAccessibilityLabel}
-            autoFocus={autoFocus}
-            blurOnSubmit
-            editable={!disabled}
-            keyboardType={type === 'number' ? 'numeric' : type === 'email' ? 'email-address' : 'default'}
-            multiline={false}
-            onBlur={() => {
-              setIsFocused(false);
-              onBlur?.();
-            }}
-            onChangeText={onChangeText}
-            onFocus={() => {
-              setIsFocused(true);
-              onFocus?.();
-            }}
-            placeholder={placeholder}
-            placeholderTextColor={disabled ? colors.action.disabled : colors.text.muted}
-            secureTextEntry={type === 'password'}
-            style={[
-              styles.input,
-              isLarge && styles.inputLarge,
-              !leadingIcon && styles.inputLeadingPadding,
-              visibleActions.length === 0 && styles.inputTrailingPadding,
-              isFocused && styles.inputFocused,
-              disabled && styles.inputDisabled,
-            ]}
-            value={value}
-          />
+            </>
+          )}
           {visibleActions.length > 0 ? (
             <View style={styles.actions}>
               {visibleActions.map((action, index) => (
-                <TouchableOpacity
+                <Touchable
                   accessibilityLabel={action.accessibilityLabel}
                   accessibilityRole="button"
                   accessibilityState={{ disabled: disabled || action.disabled }}
                   disabled={disabled || action.disabled}
                   key={action.key}
                   onPress={action.onPress}
+                  ripple="borderless"
                   style={[
                     styles.actionButton,
-                    isLarge && styles.actionButtonLarge,
                     // Only the outermost action (last in the row) sits against the pill's own
                     // rounded edge — any actions before it are sandwiched between the text field
                     // and another action button, so they stay square on both sides.
@@ -155,7 +153,7 @@ export function Input({
                     name={action.icon}
                     size={action.iconSize ?? 'sm'}
                   />
-                </TouchableOpacity>
+                </Touchable>
               ))}
             </View>
           ) : null}
@@ -170,8 +168,47 @@ export function Input({
   );
 }
 
-const MAX_INPUT_ACTIONS = 2;
-const DISABLED_INPUT_OPACITY = 0.64;
+function LeadingIcon({ disabled, icon, size }: { disabled: boolean; icon: IconName; size: IconSize }) {
+  return (
+    <View style={styles.leadingIconSlot}>
+      <Icon color={disabled ? colors.action.disabled : colors.icon.primary} name={icon} size={size} />
+    </View>
+  );
+}
+
+function EditableField({
+  accessibilityLabel,
+  autoFocus = false,
+  disabled,
+  inputRef,
+  onBlur,
+  onChangeText,
+  onFocus,
+  placeholder,
+  style,
+  type = 'text',
+  value,
+}: EditableInputProps & { accessibilityLabel: string; disabled: boolean; style: React.ComponentProps<typeof TextInput>['style'] }) {
+  return (
+    <TextInput
+      ref={inputRef}
+      accessibilityLabel={accessibilityLabel}
+      autoFocus={autoFocus}
+      blurOnSubmit
+      editable={!disabled}
+      keyboardType={type === 'number' ? 'numeric' : type === 'email' ? 'email-address' : 'default'}
+      multiline={false}
+      onBlur={onBlur}
+      onChangeText={onChangeText}
+      onFocus={onFocus}
+      placeholder={placeholder}
+      placeholderTextColor={disabled ? colors.action.disabled : colors.text.muted}
+      secureTextEntry={type === 'password'}
+      style={style}
+      value={value}
+    />
+  );
+}
 
 function firstNonEmptyText(...values: Array<string | undefined>) {
   return values.find(value => value != null && value.length > 0);
@@ -190,22 +227,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.xxs,
   },
-  // Shadow lives on this outer wrap, never on inputWrapper itself — inputWrapper needs
-  // overflow: 'hidden' to clip to the pill shape, which would also clip a shadow placed on
-  // the same view. Toggling that combination in response to focus is what was destabilizing
-  // the native keyboard session right as it tried to present.
-  inputShadowWrap: {
-    borderRadius: radii.pill,
-  },
+  // minHeight rather than height, here and on the field: the text scales with the OS font size,
+  // and a fixed height would clip it at the larger accessibility sizes (docs/search-spec.md §6).
   inputWrapper: {
     alignItems: 'center',
     borderRadius: radii.pill,
     flexDirection: 'row',
-    height: sizes.input.height,
-    overflow: 'hidden',
-  },
-  inputWrapperLarge: {
-    height: sizes.input.heightLarge,
+    minHeight: sizes.input.height,
   },
   inputWrapperDisabled: {
     opacity: DISABLED_INPUT_OPACITY,
@@ -220,25 +248,40 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: typography.body.fontFamily,
     fontSize: typography.body.fontSize,
-    height: sizes.input.height,
+    minHeight: sizes.input.height,
     paddingVertical: spacing.none,
-  },
-  inputLarge: {
-    height: sizes.input.heightLarge,
   },
   // Only add horizontal breathing room on an edge that isn't already padded by an
   // adjacent leadingIcon slot or action button.
   inputLeadingPadding: {
-    paddingLeft: spacing.xs,
+    paddingLeft: spacing.md,
   },
   inputTrailingPadding: {
-    paddingRight: spacing.xs,
+    paddingRight: spacing.md,
   },
   inputDisabled: {
     color: colors.action.disabled,
   },
-  inputFocused: {
-    color: colors.text.primary,
+  placeholder: {
+    color: colors.text.muted,
+    minHeight: undefined,
+  },
+  // Rounded and clipped on the pill's side, so the Android ripple follows the pill's rounded end
+  // instead of spilling past it into the bounding rectangle. The edge that meets an action stays
+  // square, like the action's own inner edge.
+  triggerArea: {
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    borderBottomLeftRadius: radii.pill,
+    borderTopLeftRadius: radii.pill,
+    flex: 1,
+    flexDirection: 'row',
+    overflow: 'hidden',
+  },
+  // With no actions the trigger reaches the pill's other end too.
+  triggerAreaOuter: {
+    borderBottomRightRadius: radii.pill,
+    borderTopRightRadius: radii.pill,
   },
   actions: {
     alignItems: 'center',
@@ -248,42 +291,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: sizes.input.height,
     justifyContent: 'center',
-    width: sizes.input.height,
-  },
-  actionButtonLarge: {
-    height: sizes.input.heightLarge,
-    width: sizes.input.heightLarge,
+    width: sizes.input.actionWidth,
   },
   // Rounds only the edge that touches the pill's own outer boundary — applied to whichever
-  // action is currently last, regardless of size or how many actions are visible.
+  // action is currently last, regardless of how many actions are visible.
   actionButtonOuter: {
     borderBottomRightRadius: radii.pill,
     borderTopRightRadius: radii.pill,
   },
+  // Hugs the icon: 16 inset, the icon, then an 8 gap to the text. The same geometry as the search
+  // result rows (SearchOverlay), so icons and text line up down the whole column.
   leadingIconSlot: {
     alignItems: 'center',
-    borderBottomLeftRadius: radii.pill,
-    borderBottomRightRadius: 0,
-    borderTopLeftRadius: radii.pill,
-    borderTopRightRadius: 0,
     height: sizes.input.height,
-    justifyContent: 'center',
-    width: sizes.input.height,
-  },
-  // Large variant hugs the icon instead of matching a fixed square slot: width comes from the
-  // icon's own intrinsic size plus this padding, not from the row height.
-  //
-  // The two paddings differ on purpose. `paddingLeft` matches the suggestion rows'
-  // `paddingHorizontal` (LibraryScreen `resultRow`) so both search icons sit on the same x.
-  // `paddingRight` matches those rows' `gap` so the text after the icon lands on the same x too —
-  // a symmetric spacing.md here would push the typed query 8px right of every suggestion below it.
-  leadingIconSlotLarge: {
-    alignItems: 'center',
-    borderBottomLeftRadius: radii.pill,
-    borderBottomRightRadius: 0,
-    borderTopLeftRadius: radii.pill,
-    borderTopRightRadius: 0,
-    height: sizes.input.heightLarge,
     justifyContent: 'center',
     paddingLeft: spacing.md,
     paddingRight: spacing.xs,

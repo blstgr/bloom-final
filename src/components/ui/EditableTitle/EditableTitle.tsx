@@ -1,8 +1,9 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { colors, sizes, spacing, typography } from '../../../theme';
 import { Icon } from '../Icon';
+import { Touchable } from '../Touchable';
 
 // Reserve space for the trailing edit icon + gap when bounding the text's wrap width, so the
 // row hugs the text's *actual* rendered (post-wrap) size instead of the full available width.
@@ -126,7 +127,7 @@ export function EditableTitle({
           />
         </View>
       ) : (
-        <Pressable
+        <Touchable
           accessibilityLabel={displayAccessibilityLabel}
           accessibilityRole="button"
           onPress={() => setEditing(true)}
@@ -144,7 +145,7 @@ export function EditableTitle({
             {value.length > 0 ? value : ''}
           </Text>
           <Icon color={colors.icon.primary} name="edit" />
-        </Pressable>
+        </Touchable>
       )}
     </View>
   );

@@ -383,7 +383,7 @@ describe('PlantDataProvider identifyAndResolveSpecies name fallback', () => {
 
     expect(mockSearchSpecies).toHaveBeenNthCalledWith(1, 'Honeyplant');
     expect(mockSearchSpecies).toHaveBeenNthCalledWith(2, 'Hoya carnosa');
-    expect(result.success && result.species.speciesName).toBe('Wax Plant');
+    expect(result.success && result.species.speciesName).toBe('Wax plant');
   });
 
   it('falls back to the genus when both the common name and scientific name have no Perenual match', async () => {
@@ -418,7 +418,7 @@ describe('PlantDataProvider identifyAndResolveSpecies name fallback', () => {
     expect(mockSearchSpecies).toHaveBeenNthCalledWith(1, 'Moneytree');
     expect(mockSearchSpecies).toHaveBeenNthCalledWith(2, 'Pachira glabra');
     expect(mockSearchSpecies).toHaveBeenNthCalledWith(3, 'Pachira');
-    expect(result.success && result.species.speciesName).toBe('Guiana Chestnut');
+    expect(result.success && result.species.speciesName).toBe('Guiana chestnut');
   });
 
   it('does not retry when every name tier collapses to the same single distinct name', async () => {
@@ -499,7 +499,7 @@ describe('PlantDataProvider species/details MOCKED fallback', () => {
     expect(result!).toEqual({
       species: expect.objectContaining({
         // Name comes from Perenual's own search match (real), not anything invented here.
-        speciesName: 'ZZ Plant',
+        speciesName: 'ZZ plant',
         // Care facts come from this app's curated seed data via the name match, not fabricated.
         isToxicToPets: true,
         lightNeed: 'bright',
@@ -655,8 +655,8 @@ describe('PlantDataProvider concurrent resolution', () => {
       [resultA, resultB] = await Promise.all([promiseA, promiseB]);
     });
 
-    expect(resultA.success && resultA.species.speciesName).toBe('ZZ Plant');
-    expect(resultB.success && resultB.species.speciesName).toBe('Zanzibar Gem');
+    expect(resultA.success && resultA.species.speciesName).toBe('ZZ plant');
+    expect(resultB.success && resultB.species.speciesName).toBe('Zanzibar gem');
     // Both names skip the confirmed-blocked live species/details call entirely — neither should
     // have needed it, and reusing the wrong in-flight entry is exactly what would have made one
     // of these two calls wrongly attempt it (or wrongly inherit the other's name).

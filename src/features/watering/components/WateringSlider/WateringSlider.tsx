@@ -173,7 +173,7 @@ export function WateringSlider({
        * view's own bounds always match its content exactly. */}
       <View style={styles.trackShadow}>
         <View style={[styles.track, activeState === 'completed' && styles.completedTrack]}>
-          {activeState !== 'completed' ? <GlassView border={false} style={styles.blurLayer} /> : null}
+          {activeState !== 'completed' ? <GlassView border={false} shadow={false} style={styles.blurLayer} /> : null}
         </View>
       </View>
       {/* Sibling of trackShadow, not nested inside it — `track` needs overflow: 'hidden' to clip

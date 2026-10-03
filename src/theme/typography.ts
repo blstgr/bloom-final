@@ -2,6 +2,8 @@ export const fontFamilies = {
   display:  'CabinetGrotesk-Black',
   body:     'Satoshi-Medium',
   bodyBold: 'Satoshi-Bold',
+  /** Button and chip labels (Figma: Satoshi Black). */
+  bodyBlack: 'Satoshi-Black',
 } as const;
 
 const body = {
@@ -27,5 +29,5 @@ export const typography = {
   // Body copy — Satoshi, 3 variations
   body,
   bodyS,
-  button: body,
+  button: { ...body, fontFamily: fontFamilies.bodyBlack },
 } as const;

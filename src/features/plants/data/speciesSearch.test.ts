@@ -78,20 +78,26 @@ describe('searchSeedSpecies', () => {
 
   it('matches every seed species sharing a prefix', () => {
     const names = searchSeedSpecies('zebra').map(result => result.speciesName);
-    expect(names).toEqual(expect.arrayContaining(['Zebra Haworthia', 'Zebra Cactus']));
+    expect(names).toEqual(expect.arrayContaining(['Zebra haworthia', 'Zebra cactus']));
   });
 
   it('matches a word that starts later in the name', () => {
     const names = searchSeedSpecies('palm').map(result => result.speciesName);
-    expect(names).toContain('Parlor Palm');
+    expect(names).toContain('Parlor palm');
   });
 
   it('returns nothing for a blank query', () => {
     expect(searchSeedSpecies('   ')).toEqual([]);
   });
 
-  it('returns nothing when no seed species matches', () => {
-    expect(searchSeedSpecies('fiddle leaf fig')).toEqual([]);
+  it('also matches the popular-plants catalog', () => {
+    expect(searchSeedSpecies('fiddle leaf fig')).toEqual([
+      { speciesId: 'fiddle-leaf-fig', speciesName: 'Fiddle leaf fig' },
+    ]);
+  });
+
+  it('returns nothing when no shipped species matches', () => {
+    expect(searchSeedSpecies('baobab')).toEqual([]);
   });
 });
 
@@ -103,6 +109,14 @@ describe('mergeSearchResults', () => {
       { speciesId: '404', speciesName: 'Zamioculcas' },
     ]);
     expect(merged.map(result => result.speciesId)).toEqual(['zz-plant', '404']);
+  });
+
+  it('shows one row for remote species that share a common name', () => {
+    const merged = mergeSearchResults([], [
+      { speciesId: '10', speciesName: 'Zebra plant' },
+      { speciesId: '11', speciesName: 'Zebra plant' },
+    ]);
+    expect(merged.map(result => result.speciesId)).toEqual(['10']);
   });
 
   it('drops a remote duplicate of a seed species', () => {
@@ -132,7 +146,7 @@ describe('searchSpeciesByRelevance', () => {
     // Untrimmed and uppercased: rankByRelevance assumes normalized input, so without
     // normalization here 'Parlor Palm' would fail to match its own name.
     await expect(searchSpeciesByRelevance('  PARLOR  ')).resolves.toEqual([
-      { speciesId: '7', speciesName: 'Parlor Palm' },
+      { speciesId: '7', speciesName: 'Parlor palm' },
     ]);
     expect(mockedSearchSpecies).toHaveBeenCalledWith('parlor');
   });

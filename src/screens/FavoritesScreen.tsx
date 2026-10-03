@@ -6,8 +6,8 @@ import { PlantCard } from '../components/ui/PlantCard';
 import { ScreenLayout } from '../components/ui/ScreenLayout';
 import { Tabs } from '../components/ui/Tabs';
 import { TopActions } from '../components/ui/TopActions';
-import { FAVORITES_TABS, matchesTab } from '../features/plants/data/favoritesTabs';
 import { usePlantData } from '../features/plants/data/PlantDataProvider';
+import { availableFilters, matchesFilter, type PlantFilterKey } from '../features/plants/data/plantFilters';
 import type { PlantSpecies } from '../features/plants/data/types';
 import {
   SCREENS,
@@ -22,17 +22,15 @@ export function FavoritesScreen({ navigation }: FavoritesScreenProps) {
   const { openSettings, openSpeciesInfo } = useTabScreenNavigation(navigation);
   const favorites = useAppSelector(state => state.favorites);
   const { getSpeciesById } = usePlantData();
-  const [activeTab, setActiveTab] = React.useState(FAVORITES_TABS[0].key);
+  const [activeTab, setActiveTab] = React.useState<PlantFilterKey>('all');
   const favoritedSpecies = favorites
     .map(favorite => getSpeciesById(favorite.speciesId))
     .filter((species): species is PlantSpecies => species != null);
-  // Only offer tabs that actually match something favorited — e.g. favoriting only easy plants
-  // shouldn't surface an always-empty "Somewhat Needy" tab. "All" always stays.
-  const availableTabs = FAVORITES_TABS.filter(
-    tab => tab.key === 'all' || favoritedSpecies.some(species => matchesTab(species, tab.key)),
-  );
+  // Only offer filters that match something favorited — favoriting only easy plants shouldn't
+  // surface an always-empty "Moody" chip. "All" always stays.
+  const availableTabs = availableFilters(favoritedSpecies);
   const effectiveActiveTab = availableTabs.some(tab => tab.key === activeTab) ? activeTab : 'all';
-  const visibleSpecies = favoritedSpecies.filter(species => matchesTab(species, effectiveActiveTab));
+  const visibleSpecies = favoritedSpecies.filter(species => matchesFilter(species, effectiveActiveTab));
 
 
   // The heart nav item only exists while favorites.length > 0, so this screen has no designed
@@ -60,7 +58,7 @@ export function FavoritesScreen({ navigation }: FavoritesScreenProps) {
           onRightPress={openSettings}
           rightIcon="more"
           rightLabel="Open settings"
-          title="The Maybe List"
+          title="The maybe list"
         />
       )}
       scrollableContent
@@ -70,6 +68,7 @@ export function FavoritesScreen({ navigation }: FavoritesScreenProps) {
       reserveBottomBarSpace>
       <Tabs
         activeKey={effectiveActiveTab}
+        edgeInset={layout.screenPadding}
         onTabPress={setActiveTab}
         tabs={availableTabs}
       />

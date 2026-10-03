@@ -42,6 +42,7 @@
 	<key>UIAppFonts</key>
 	<array>
 		<string>CabinetGrotesk-Black.otf</string>
+		<string>Satoshi-Black.otf</string>
 		<string>Satoshi-Bold.otf</string>
 		<string>Satoshi-Medium.otf</string>
 	</array>

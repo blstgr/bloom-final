@@ -44,8 +44,8 @@ appear, phrased naturally, but never changed or contradicted:
 ${buildFactsBlock(resolvedFacts, rawDetails)}
 
 Return strict JSON with exactly these keys:
-- "category": a short, funny/creative label summarizing how demanding this plant is (e.g.
-  "Independent Roommate", "High-Maintenance Diva"), grounded in the care level above, not a new
+- "category": a short, funny/creative label in sentence case summarizing how demanding this
+  plant is (e.g. "Independent roommate", "High-maintenance diva"), grounded in the care level above, not a new
   fact.
 - "description": ${budget} characters or fewer. Required facts first (watering, pot size,
   repotting, toxicity), creative flourish last, so truncation only ever cuts flavor text.

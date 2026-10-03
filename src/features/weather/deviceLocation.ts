@@ -119,8 +119,8 @@ export async function detectLocationFromTimeZone(): Promise<GeoLocation | null> 
  */
 export async function detectDeviceLocation(): Promise<GeoLocation | null> {
   try {
-    // Asked for explicitly rather than left to the first position request, so the prompt appears
-    // at a moment tied to the setting the user just looked at.
+    // Asked for explicitly rather than left to the first position request. Only ever reached after
+    // the in-app explainer has been answered — WeatherProvider holds detection until then.
     await requestAuthorization();
     const position = await getCurrentPosition();
 

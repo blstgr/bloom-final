@@ -7,6 +7,7 @@ import { Button } from '../src/components/ui/Button';
 import { Input } from '../src/components/ui/Input';
 import { NavBar, type NavItem } from '../src/components/ui/NavBar';
 import { Tabs, type TabItem } from '../src/components/ui/Tabs';
+import { Touchable } from '../src/components/ui/Touchable';
 import { PlantDataProvider } from '../src/features/plants/data/PlantDataProvider';
 import { SettingsRow } from '../src/features/settings/components/SettingsPanel';
 import { WateringSlider } from '../src/features/watering/components/WateringSlider';
@@ -206,7 +207,7 @@ describe('component behavior', () => {
       { key: 'diva', label: 'High-Maintenance' },
     ];
     const renderer = render(<Tabs activeKey="all" onTabPress={onTabPress} tabs={tabs} />);
-    const tabButtons = renderer.root.findAllByType(TouchableOpacity);
+    const tabButtons = renderer.root.findAllByType(Touchable);
 
     expect(tabButtons[0].props.accessibilityState.selected).toBe(true);
     expect(tabButtons[1].props.accessibilityState.selected).toBe(false);

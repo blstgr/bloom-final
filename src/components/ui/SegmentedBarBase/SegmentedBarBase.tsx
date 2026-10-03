@@ -1,13 +1,18 @@
 import React from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { radii } from '../../../theme';
+import { radii, spacing } from '../../../theme';
 import { GlassView } from '../GlassView';
 
 export type SegmentedBarBaseProps = {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 };
+
+/** The bar's inner padding (Figma `506:4520`): items sit 4 in from the rim on every side. Exported
+ * because an absolutely positioned child — NavBar's sliding pill — is laid out from the padding
+ * box's edge, not the padded content, and has to add it back itself. */
+export const SEGMENTED_BAR_PADDING = spacing.xxs;
 
 export function SegmentedBarBase({ children, style }: SegmentedBarBaseProps) {
   return (
@@ -26,5 +31,6 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'center',
+    padding: SEGMENTED_BAR_PADDING,
   },
 });

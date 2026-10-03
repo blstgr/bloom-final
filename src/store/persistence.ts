@@ -4,6 +4,7 @@ import { createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit';
 import type { FavoritesState } from './favoritesSlice';
 import { addFavorite, removeFavorite, toggleFavorite } from './favoritesSlice';
 import {
+  answerLocationPrompt,
   setAutoDetectLocation,
   setDetectedLocation,
   setSelectedLocation,
@@ -81,6 +82,8 @@ function toPersistableSettings(settings: SettingsState): Omit<SettingsState, 'is
   return {
     autoDetectLocation: settings.autoDetectLocation,
     detectedLocation: settings.detectedLocation,
+    hasAnsweredLocationPrompt: settings.hasAnsweredLocationPrompt,
+    recentLocations: settings.recentLocations,
     selectedLocation: settings.selectedLocation,
     weatherAdjustmentEnabled: settings.weatherAdjustmentEnabled,
   };
@@ -97,6 +100,7 @@ persistenceMiddleware.startListening({
 
 persistenceMiddleware.startListening({
   matcher: isAnyOf(
+    answerLocationPrompt,
     setAutoDetectLocation,
     setDetectedLocation,
     setSelectedLocation,

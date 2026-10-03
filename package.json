@@ -6,7 +6,6 @@
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "lint": "eslint .",
-    "postinstall": "node scripts/postinstall.js",
     "report:create": "python3 jira-report/report-launcher.py",
     "report:jira": "python3 jira-report/jira-report.py",
     "start": "react-native start",
@@ -14,8 +13,8 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
+    "@callstack/liquid-glass": "^0.8.2",
     "@react-native-async-storage/async-storage": "^3.1.0",
-    "@react-native-community/blur": "^4.4.1",
     "@react-native-community/geolocation": "^3.4.0",
     "@react-navigation/bottom-tabs": "^7.18.6",
     "@react-navigation/drawer": "^7.12.5",

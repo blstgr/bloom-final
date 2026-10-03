@@ -1,6 +1,8 @@
 import type { GeoLocation } from '../services/types';
 
+import { MAX_RECENT_ITEMS } from './recentItems';
 import settingsReducer, {
+  answerLocationPrompt,
   hydrateSettings,
   selectActiveLocation,
   setAutoDetectLocation,
@@ -32,6 +34,8 @@ function buildState(overrides: Partial<SettingsState> = {}): SettingsState {
     autoDetectLocation: true,
     isHydrated: true,
     detectedLocation: null,
+    hasAnsweredLocationPrompt: false,
+    recentLocations: [],
     selectedLocation: null,
     weatherAdjustmentEnabled: true,
     ...overrides,
@@ -39,6 +43,37 @@ function buildState(overrides: Partial<SettingsState> = {}): SettingsState {
 }
 
 describe('settingsSlice', () => {
+  it('records a chosen city as the most recent, without duplicates', () => {
+    let state = settingsReducer(buildState(), setSelectedLocation(kyiv));
+    state = settingsReducer(state, setSelectedLocation(london));
+    state = settingsReducer(state, setSelectedLocation(kyiv));
+
+    expect(state.recentLocations.map(location => location.name)).toEqual(['Kyiv', 'London']);
+  });
+
+  it('keeps only the most recent few cities', () => {
+    const cities = Array.from({ length: MAX_RECENT_ITEMS + 2 }, (_, index) => ({
+      ...kyiv,
+      locationId: `city-${index}`,
+      name: `City ${index}`,
+    }));
+    const state = cities.reduce(
+      (current, city) => settingsReducer(current, setSelectedLocation(city)),
+      buildState(),
+    );
+
+    expect(state.recentLocations).toHaveLength(MAX_RECENT_ITEMS);
+    expect(state.recentLocations[0].name).toBe(`City ${MAX_RECENT_ITEMS + 1}`);
+  });
+
+  it('answering the location prompt records the answer and the detection choice', () => {
+    const allowed = settingsReducer(buildState(), answerLocationPrompt({ allowDetection: true }));
+    const declined = settingsReducer(buildState(), answerLocationPrompt({ allowDetection: false }));
+
+    expect(allowed).toMatchObject({ autoDetectLocation: true, hasAnsweredLocationPrompt: true });
+    expect(declined).toMatchObject({ autoDetectLocation: false, hasAnsweredLocationPrompt: true });
+  });
+
   it('starts with both switches on, no location known, and unhydrated', () => {
     expect(settingsReducer(undefined, { type: '@@INIT' })).toEqual(
       buildState({ isHydrated: false }),

@@ -27,7 +27,7 @@ const DETAIL_IMAGE_URLS = [
 
 export const mockSpecies: PlantSpecies[] = [
   {
-    category: 'Independent Roommate',
+    category: 'Independent roommate',
     description: buildPlantDescription({
       careNote: 'tolerates low light and mild neglect',
       light: 'bright indirect light',
@@ -45,7 +45,7 @@ export const mockSpecies: PlantSpecies[] = [
     wateringIntervalDays: WATERING_INTERVAL_DAYS,
   },
   {
-    category: 'High-Maintenance Diva',
+    category: 'High-maintenance diva',
     description: buildPlantDescription({
       careNote: 'needs steady warmth to avoid sulking',
       light: 'bright indirect light',
@@ -59,11 +59,11 @@ export const mockSpecies: PlantSpecies[] = [
     isToxicToPets: true,
     lightNeed: 'bright',
     speciesId: 'monstera-deliciosa',
-    speciesName: 'Monstera Deliciosa',
+    speciesName: 'Monstera deliciosa',
     wateringIntervalDays: 10,
   },
   {
-    category: 'Chaotic Overachiever',
+    category: 'Chaotic overachiever',
     description: buildPlantDescription({
       careNote: 'keeps its marbling best with steady care',
       light: 'bright indirect light',
@@ -77,11 +77,11 @@ export const mockSpecies: PlantSpecies[] = [
     isToxicToPets: true,
     lightNeed: 'bright',
     speciesId: 'marble-queen-pothos',
-    speciesName: 'Marble Queen Pothos',
+    speciesName: 'Marble queen pothos',
     wateringIntervalDays: 10,
   },
   {
-    category: 'Low-Key Homebody',
+    category: 'Low-key homebody',
     description: buildPlantDescription({
       careNote: 'handles normal room humidity calmly',
       light: 'low to bright indirect light',
@@ -95,11 +95,11 @@ export const mockSpecies: PlantSpecies[] = [
     isToxicToPets: false,
     lightNeed: 'low',
     speciesId: 'parlor-palm',
-    speciesName: 'Parlor Palm',
+    speciesName: 'Parlor palm',
     wateringIntervalDays: 12,
   },
   {
-    category: 'Lucky Charm',
+    category: 'Lucky charm',
     description: buildPlantDescription({
       careNote: 'prefers a consistent care rhythm',
       light: 'bright indirect light',
@@ -113,11 +113,11 @@ export const mockSpecies: PlantSpecies[] = [
     isToxicToPets: false,
     lightNeed: 'bright',
     speciesId: 'money-tree',
-    speciesName: 'Money Tree',
+    speciesName: 'Money tree',
     wateringIntervalDays: 12,
   },
   {
-    category: 'Silent Guardian',
+    category: 'Silent guardian',
     description: buildPlantDescription({
       careNote: 'dislikes being moved once settled',
       light: 'bright indirect light',
@@ -131,11 +131,11 @@ export const mockSpecies: PlantSpecies[] = [
     isToxicToPets: true,
     lightNeed: 'bright',
     speciesId: 'rubber-plant',
-    speciesName: 'Rubber Plant',
+    speciesName: 'Rubber plant',
     wateringIntervalDays: 12,
   },
   {
-    category: 'Dramatic Perfectionist',
+    category: 'Dramatic perfectionist',
     description: buildPlantDescription({
       careNote: 'prefers consistently moist soil',
       light: 'medium indirect light',
@@ -149,11 +149,11 @@ export const mockSpecies: PlantSpecies[] = [
     isToxicToPets: false,
     lightNeed: 'bright',
     speciesId: 'prayer-plant',
-    speciesName: 'Prayer Plant',
+    speciesName: 'Prayer plant',
     wateringIntervalDays: 6,
   },
   {
-    category: 'Easygoing Buddy',
+    category: 'Easygoing buddy',
     description: buildPlantDescription({
       careNote: 'tolerates dry spells with thick leaves',
       light: 'medium indirect light',
@@ -167,7 +167,7 @@ export const mockSpecies: PlantSpecies[] = [
     isToxicToPets: false,
     lightNeed: 'bright',
     speciesId: 'variegated-peperomia',
-    speciesName: 'Variegated Peperomia',
+    speciesName: 'Variegated peperomia',
     wateringIntervalDays: 12,
   },
   {
@@ -185,7 +185,7 @@ export const mockSpecies: PlantSpecies[] = [
     isToxicToPets: false,
     lightNeed: 'bright',
     speciesId: 'zebra-haworthia',
-    speciesName: 'Zebra Haworthia',
+    speciesName: 'Zebra haworthia',
     wateringIntervalDays: WATERING_INTERVAL_DAYS,
   },
   {
@@ -203,7 +203,7 @@ export const mockSpecies: PlantSpecies[] = [
     isToxicToPets: false,
     lightNeed: 'bright',
     speciesId: 'zebra-cactus',
-    speciesName: 'Zebra Cactus',
+    speciesName: 'Zebra cactus',
     wateringIntervalDays: WATERING_INTERVAL_DAYS,
   },
   {
@@ -300,9 +300,6 @@ export const initialOwnedPlants: OwnedPlant[] = [
   },
 ];
 
-export function getSpeciesById(speciesId: string | undefined) {
-  return mockSpecies.find(species => species.speciesId === speciesId);
-}
 
 // Common names a real identification/search result is likely to use, beyond the exact curated
 // `speciesName` string above — used only to match a real (already-identified) name against this
