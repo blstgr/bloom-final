@@ -8,6 +8,7 @@ import ReactTestRenderer from 'react-test-renderer';
 import { AppText } from '../src/components/ui/AppText';
 import { Button } from '../src/components/ui/Button';
 import { Touchable } from '../src/components/ui/Touchable';
+import { CATALOG_ARTICLES } from '../src/features/plants/data/catalogArticles';
 import { mockSpecies } from '../src/features/plants/data/mockPlants';
 import { PlantDataProvider, usePlantData } from '../src/features/plants/data/PlantDataProvider';
 import type { OwnedPlant, PlantSpecies } from '../src/features/plants/data/types';
@@ -593,6 +594,24 @@ test('SpeciesInfoScreen does not act on a resolution that finishes after the scr
   // The resolution finished, but the screen that started it was already gone — it must not have
   // recorded search history on the still-mounted provider.
   expect(latestSearchHistory).toEqual([]);
+});
+
+test('a shipped species shows its own article, each paragraph once', async () => {
+  const species = mockSpecies[0];
+  const paragraphs = CATALOG_ARTICLES[species.speciesId].split('\n\n');
+  let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+  await ReactTestRenderer.act(() => {
+    renderer = ReactTestRenderer.create(
+      renderWithProviders(<SpeciesInfoScreen {...createSpeciesInfoProps(species.speciesId)} />),
+    );
+  });
+
+  paragraphs.forEach(paragraph => {
+    expect(
+      renderer!.root.findAll(node => node.props.children === paragraph && typeof node.type === 'string'),
+    ).toHaveLength(1);
+  });
 });
 
 test('toggles a species favorite from SpeciesInfoScreen and flips the heart button state', async () => {

@@ -25,11 +25,10 @@ import type {
 } from '../../../services/types';
 import { GENERIC_QUERY_WORDS, searchPhoto } from '../../../services/unsplashApi';
 
+import { noPlantPhoto } from './noPlantPhoto';
 import { buildFallbackSpeciesDetails } from './speciesDetailsFallback';
 import { toDisplaySpeciesName } from './speciesName';
 import type { PlantSpecies } from './types';
-
-const noPlantPhoto = require('../../../assets/images/no-plant-photo.jpg') as ImageSourcePropType;
 
 /** True when a caller supplied a usable name, so the blocked species/details call can be skipped
  * (see speciesDetailsFallback.ts). */
@@ -193,32 +192,51 @@ export async function resolveSpeciesCore(perenualId: number, knownName?: string)
   return { commonName: toDisplaySpeciesName(details.common_name), generated, photoUrl, resolvedFacts };
 }
 
-/** The caller-specific part: cheap, synchronous, never shared. `fallbackImage` (the user's own
- * captured photo, when resolution started from a photo-identify flow) is preferred over the
- * generic no-photo asset if every real photo tier came up empty in the core resolution above —
- * applied fresh per caller so one caller's fallback image can never leak into another concurrent
- * caller's result for the same species. */
-export function assemblePlantSpecies(
-  perenualId: number,
-  core: ResolvedSpeciesCore,
-  fallbackImage?: ImageSourcePropType,
-): PlantSpecies {
+/** The species as written up, with no caller's fallback image and no display wording: what the
+ * species cache holds and stores on the device. A plant with no real photo carries the generic
+ * no-photo asset and an empty `detailImageUrl`; presentSpecies decides what that means on screen. */
+export function toStoredSpecies(perenualId: number, core: ResolvedSpeciesCore): PlantSpecies {
   const { commonName, generated, photoUrl, resolvedFacts } = core;
-  const speciesId = String(perenualId);
-  const imageSource: ImageSourcePropType = photoUrl ? { uri: photoUrl } : (fallbackImage ?? noPlantPhoto);
-  const hasPhoto = photoUrl !== null || fallbackImage !== undefined;
+  const imageSource: ImageSourcePropType = photoUrl ? { uri: photoUrl } : noPlantPhoto;
 
   return {
     category: generated.category,
-    description: hasPhoto ? generated.description : `${NO_PHOTO_ACKNOWLEDGMENT}${generated.description}`,
+    description: generated.description,
     detailImage: imageSource,
     detailImageUrl: photoUrl ?? '',
     image: imageSource,
     isToxicToPets: resolvedFacts.isToxicToPets,
     lightNeed: resolvedFacts.lightNeed,
-    speciesId,
+    speciesId: String(perenualId),
     speciesName: commonName,
     wateringIntervalDays: resolvedFacts.wateringIntervalDays,
-    wikiArticle: hasPhoto ? generated.wikiArticle : `${NO_PHOTO_ACKNOWLEDGMENT}${generated.wikiArticle}`,
+    wikiArticle: generated.wikiArticle,
   };
+}
+
+/** The caller-specific part: cheap, synchronous, never shared, and the one place the no-photo rule
+ * lives. `fallbackImage` (the user's own captured photo, when resolution started from a
+ * photo-identify flow) is preferred over the generic no-photo asset if the species has no real
+ * photo — applied fresh per caller so one caller's fallback image can never leak into another
+ * concurrent caller's result for the same species. A plant shown with no photo at all says so
+ * ahead of its copy. Returns the species itself when there is nothing to change. */
+export function presentSpecies(species: PlantSpecies, fallbackImage?: ImageSourcePropType): PlantSpecies {
+  if (species.detailImageUrl) return species;
+
+  if (fallbackImage) return { ...species, detailImage: fallbackImage, image: fallbackImage };
+
+  return {
+    ...species,
+    description: `${NO_PHOTO_ACKNOWLEDGMENT}${species.description}`,
+    wikiArticle: species.wikiArticle === undefined ? undefined : `${NO_PHOTO_ACKNOWLEDGMENT}${species.wikiArticle}`,
+  };
+}
+
+/** A freshly resolved core, ready for this caller's screen. */
+export function assemblePlantSpecies(
+  perenualId: number,
+  core: ResolvedSpeciesCore,
+  fallbackImage?: ImageSourcePropType,
+): PlantSpecies {
+  return presentSpecies(toStoredSpecies(perenualId, core), fallbackImage);
 }

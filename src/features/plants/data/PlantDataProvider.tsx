@@ -11,13 +11,16 @@ import {
   initialOwnedPlants as defaultInitialOwnedPlants,
 } from './mockPlants';
 import { loadOwnedPlants, saveOwnedPlants } from './ownedPlantsStorage';
+import { createSpeciesCache } from './speciesCache';
 import {
   assemblePlantSpecies,
   hasKnownName,
+  presentSpecies,
   type ResolvedSpeciesCore,
   resolveSpeciesCore,
   type SpeciesLookupFailureReason,
   toLookupFailureReason,
+  toStoredSpecies,
 } from './speciesResolution';
 import type { OwnedPlant, PlantDetection, PlantSpecies } from './types';
 
@@ -51,6 +54,9 @@ export type PlantDataContextValue = {
    * `fallbackImage`, when given, is preferred over the generic no-photo asset if no real photo
    * is found for the resolved species. */
   lookupSpeciesByName: (name: string, fallbackImage?: ImageSourcePropType) => Promise<SpeciesLookupResult>;
+  /** SpeciesInfoScreen reports each plant it shows, so a stored plant reopened stays among the
+   * most recently opened rather than falling off by when it was first written up (spec §3.8). */
+  markSpeciesOpened: (speciesId: string) => void;
   markWatered: (ownedPlantId: string) => void;
   ownedPlants: OwnedPlant[];
   renameOwnedPlant: (ownedPlantId: string, customName: string) => PlantNameSaveResult;
@@ -144,7 +150,10 @@ export function PlantDataProvider({
   const ownedPlantsRef = React.useRef<OwnedPlant[]>(initialOwnedPlants);
   const detectionIndexRef = React.useRef(INITIAL_DETECTION_INDEX);
   const ownedPlantIndexRef = React.useRef(getNextOwnedPlantIndex(initialOwnedPlants));
-  const speciesCacheRef = React.useRef<Record<string, PlantSpecies>>({});
+  const [speciesCache] = React.useState(createSpeciesCache);
+  // Each stored species' on-screen form, made once so getSpeciesById hands every render the same
+  // object. Stored species are never replaced in place, so the stored object is a safe key.
+  const presentedSpeciesRef = React.useRef(new WeakMap<PlantSpecies, PlantSpecies>());
   const speciesCoreCacheRef = React.useRef<Record<string, ResolvedSpeciesCore>>({});
   // Per speciesId, a map from "shape of work" to its in-flight promise — keyed by the exact
   // knownName string, with `NO_KNOWN_NAME_KEY` standing in for "no knownName" (never a real name,
@@ -193,10 +202,18 @@ export function PlantDataProvider({
   const getSpeciesById = React.useCallback(
     (speciesId: string | undefined) => {
       if (!speciesId) return undefined;
-      return speciesCacheRef.current[speciesId] ?? getCatalogSpeciesById(speciesId);
+      const stored = speciesCache.get(speciesId);
+      if (!stored) return getCatalogSpeciesById(speciesId);
+
+      let presented = presentedSpeciesRef.current.get(stored);
+      if (!presented) {
+        presented = presentSpecies(stored);
+        presentedSpeciesRef.current.set(stored, presented);
+      }
+      return presented;
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- speciesCacheVersion drives re-reads of the ref
-    [speciesCacheVersion],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- speciesCacheVersion drives re-reads of the cache
+    [speciesCache, speciesCacheVersion],
   );
 
   const resolveSpeciesById = React.useCallback(
@@ -213,6 +230,12 @@ export function PlantDataProvider({
       // image (and hasPhoto-dependent description) for every other concurrent caller too.
       let core = speciesCoreCacheRef.current[speciesId];
       if (!core) {
+        // Written up in an earlier session: restored from storage, which keeps the species but not
+        // its core. Reuse it rather than paying Perenual/Unsplash/DeepSeek again for a result the
+        // cache would then discard.
+        const stored = speciesCache.get(speciesId);
+        if (stored) return { species: presentSpecies(stored, fallbackImage), success: true };
+
         const slot = speciesCoreInFlightRef.current[speciesId] ?? {};
         const knownNameKeys = Object.keys(slot).filter(key => key !== NO_KNOWN_NAME_KEY);
         // A caller with a knownName resolves instantly via the synthesized fallback (see the
@@ -273,18 +296,22 @@ export function PlantDataProvider({
       const species = assemblePlantSpecies(perenualId, core, fallbackImage);
 
       // The persisted, synchronously-readable cache (getSpeciesById — search history, future
-      // lookups) always stores the canonical no-fallback-image assembly, regardless of which
-      // caller resolved it first, so a photo-add flow's own captured photo never becomes another
-      // unrelated lookup's species image.
-      if (!speciesCacheRef.current[speciesId]) {
-        const canonicalSpecies = fallbackImage ? assemblePlantSpecies(perenualId, core, undefined) : species;
-        speciesCacheRef.current = { ...speciesCacheRef.current, [speciesId]: canonicalSpecies };
+      // lookups) always stores the species as written up, with no caller's fallback image and no
+      // display wording, regardless of which caller resolved it first, so a photo-add flow's own
+      // captured photo never becomes another unrelated lookup's species image. Readers present it.
+      if (!speciesCache.get(speciesId)) {
+        speciesCache.add(toStoredSpecies(perenualId, core));
         setSpeciesCacheVersion(version => version + 1);
       }
 
       return { species, success: true };
     },
-    [],
+    [speciesCache],
+  );
+
+  const markSpeciesOpened = React.useCallback(
+    (speciesId: string) => speciesCache.markOpened(speciesId),
+    [speciesCache],
   );
 
   const lookupSpeciesByName = React.useCallback(
@@ -537,6 +564,19 @@ export function PlantDataProvider({
     saveOwnedPlants(ownedPlants);
   }, [ownedPlants]);
 
+  // Searched plants written up in earlier sessions; the merge and its save are speciesCache's.
+  React.useEffect(() => {
+    let cancelled = false;
+
+    speciesCache.hydrate().then(restoredAny => {
+      if (!cancelled && restoredAny) setSpeciesCacheVersion(version => version + 1);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [speciesCache]);
+
   const value = React.useMemo<PlantDataContextValue>(
     () => ({
       addSearchHistoryEntry,
@@ -548,6 +588,7 @@ export function PlantDataProvider({
       getSpeciesById,
       identifyAndResolveSpecies,
       lookupSpeciesByName,
+      markSpeciesOpened,
       markWatered,
       ownedPlants,
       renameOwnedPlant,
@@ -567,6 +608,7 @@ export function PlantDataProvider({
       getSpeciesById,
       identifyAndResolveSpecies,
       lookupSpeciesByName,
+      markSpeciesOpened,
       markWatered,
       ownedPlants,
       renameOwnedPlant,

@@ -14,8 +14,8 @@ export type PlantSpecies = {
   speciesId: string;
   speciesName: string;
   wateringIntervalDays: number;
-  /** Long, same-voice-as-description article for SpeciesInfoScreen. Only set for real
-   * Perenual/DeepSeek-sourced species — mock seed species fall back to repeating `description`. */
+  /** The article on SpeciesInfoScreen, four paragraphs: DeepSeek writes it when a searched plant
+   * is opened, and shipped plants carry theirs in catalogArticles.ts. */
   wikiArticle?: string;
 };
 

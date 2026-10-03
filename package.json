@@ -5,6 +5,7 @@
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
+    "generate:articles": "jest --no-cache --watchman=false --testMatch '<rootDir>/scripts/generateCatalogArticles.ts' --testPathIgnorePatterns '/node_modules/'",
     "lint": "eslint .",
     "report:create": "python3 jira-report/report-launcher.py",
     "report:jira": "python3 jira-report/jira-report.py",

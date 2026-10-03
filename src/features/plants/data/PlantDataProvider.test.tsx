@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
 import { act, create } from 'react-test-renderer';
 
@@ -145,6 +146,136 @@ describe('PlantDataProvider species caching', () => {
     });
 
     expect(result).toEqual({ reason: 'no-perenual-match', success: false });
+  });
+});
+
+describe('PlantDataProvider stored species', () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    // resetAllMocks also strips the storage mock's in-memory implementation; give it a fresh one.
+    const store = new Map<string, string>();
+    (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => Promise.resolve(store.get(key) ?? null));
+    (AsyncStorage.setItem as jest.Mock).mockImplementation((key: string, value: string) => {
+      store.set(key, value);
+      return Promise.resolve();
+    });
+    mockSearchSpecies.mockResolvedValue([MATCH]);
+    mockGetSpeciesDetails.mockResolvedValue(DETAILS);
+    mockGenerateSpeciesCopy.mockResolvedValue({
+      category: 'Independent roommate',
+      description: 'Likes bright indirect light.',
+      wikiArticle: 'One.\n\nTwo.\n\nThree.\n\nFour.',
+    });
+  });
+
+  it('brings back a written-up plant in the next session without writing it again', async () => {
+    const firstSession = renderProvider();
+    let written: PlantSpecies;
+    await act(async () => {
+      await Promise.resolve();
+      written = await expectResolvedSpecies(firstSession, MATCH.id);
+    });
+
+    const nextSession = renderProvider();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(nextSession().getSpeciesById('42')).toEqual(written!);
+    expect(mockGenerateSpeciesCopy).toHaveBeenCalledTimes(1);
+  });
+
+  it('identifies an already-stored plant without writing it again', async () => {
+    const firstSession = renderProvider();
+    let written: PlantSpecies;
+    await act(async () => {
+      await Promise.resolve();
+      written = await expectResolvedSpecies(firstSession, MATCH.id);
+    });
+
+    const nextSession = renderProvider();
+    let result!: SpeciesLookupResult;
+    await act(async () => {
+      await Promise.resolve();
+      result = await nextSession().lookupSpeciesByName('ZZ plant', { uri: 'file:///captured.jpg' });
+    });
+
+    // It has a real photo, so the captured one is not used and the stored species comes back as is.
+    expect(result).toEqual({ species: written!, success: true });
+    expect(mockGenerateSpeciesCopy).toHaveBeenCalledTimes(1);
+  });
+
+  it('moves a reopened stored plant to the front of what is stored', async () => {
+    const OLDER_ID = 7;
+    const firstSession = renderProvider();
+    await act(async () => {
+      await Promise.resolve();
+      await firstSession().resolveSpeciesById(OLDER_ID, undefined, 'Snake plant');
+      await expectResolvedSpecies(firstSession, MATCH.id);
+    });
+
+    const nextSession = renderProvider();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    act(() => nextSession().markSpeciesOpened(String(OLDER_ID)));
+
+    const stored = JSON.parse((await AsyncStorage.getItem('bloom.speciesCache.v2'))!) as PlantSpecies[];
+    expect(stored.map(entry => entry.speciesId)).toEqual([String(OLDER_ID), String(MATCH.id)]);
+  });
+
+  it('gives an already-stored plant with no photo the captured one, without the no-photo note', async () => {
+    mockGetSpeciesDetails.mockResolvedValue({ ...DETAILS, default_image: null });
+    mockSearchPhoto.mockResolvedValue(null);
+    const firstSession = renderProvider();
+    await act(async () => {
+      await Promise.resolve();
+      await expectResolvedSpecies(firstSession, MATCH.id);
+    });
+
+    const capturedImage = { uri: 'file:///captured.jpg' };
+    const nextSession = renderProvider();
+    let result!: SpeciesLookupResult;
+    await act(async () => {
+      await Promise.resolve();
+      result = await nextSession().lookupSpeciesByName('ZZ plant', capturedImage);
+    });
+
+    expect(result).toEqual({
+      species: expect.objectContaining({
+        description: 'Likes bright indirect light.',
+        image: capturedImage,
+        wikiArticle: 'One.\n\nTwo.\n\nThree.\n\nFour.',
+      }),
+      success: true,
+    });
+    expect(mockGenerateSpeciesCopy).toHaveBeenCalledTimes(1);
+  });
+
+  it('stores a no-photo plant\'s copy as written, and adds the no-photo note only when it is shown', async () => {
+    mockGetSpeciesDetails.mockResolvedValue({ ...DETAILS, default_image: null });
+    mockSearchPhoto.mockResolvedValue(null);
+    const firstSession = renderProvider();
+    await act(async () => {
+      await Promise.resolve();
+      await expectResolvedSpecies(firstSession, MATCH.id);
+    });
+
+    const stored = JSON.parse((await AsyncStorage.getItem('bloom.speciesCache.v2'))!) as PlantSpecies[];
+    expect(stored[0]).toEqual(
+      expect.objectContaining({ description: 'Likes bright indirect light.', wikiArticle: 'One.\n\nTwo.\n\nThree.\n\nFour.' }),
+    );
+
+    const nextSession = renderProvider();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const shown = nextSession().getSpeciesById(String(MATCH.id));
+    expect(shown?.description).toBe("We couldn't reliably find what this one looks like, but here's what we know:\n\nLikes bright indirect light.");
+    expect(shown?.wikiArticle?.startsWith("We couldn't reliably find what this one looks like")).toBe(true);
+    // Every read hands back the same object, so screens holding it do not see a new species each render.
+    expect(nextSession().getSpeciesById(String(MATCH.id))).toBe(shown);
   });
 });
 

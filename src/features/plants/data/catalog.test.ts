@@ -1,3 +1,5 @@
+import { WIKI_ARTICLE_MAX_CHARS, WIKI_ARTICLE_PARAGRAPH_COUNT } from '../../../services/plantCopyApi';
+
 import { catalogSpecies } from './catalog';
 import { SEED_PLANT_PHOTO_CREDITS } from './mockPlants';
 
@@ -22,4 +24,15 @@ describe('species catalog', () => {
       expect(credit.photographer).not.toBe('');
     });
   });
+
+  it.each(catalogSpecies.map(species => [species.speciesId, species]))(
+    '%s has its own article, in shape and true to its watering interval',
+    (_, species) => {
+      const article = species.wikiArticle ?? '';
+
+      expect(article.split('\n\n')).toHaveLength(WIKI_ARTICLE_PARAGRAPH_COUNT);
+      expect(article.length).toBeLessThanOrEqual(WIKI_ARTICLE_MAX_CHARS);
+      expect(article).toContain(`${species.wateringIntervalDays} days`);
+    },
+  );
 });

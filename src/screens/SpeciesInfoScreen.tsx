@@ -26,19 +26,18 @@ import { layout, spacing } from '../theme';
 const ARTICLE_HERO_HEIGHT = 388;
 const ARTICLE_HERO_COLLAPSED_HEIGHT = 141;
 const ARTICLE_HERO_COLLAPSE_DISTANCE = ARTICLE_HERO_HEIGHT - ARTICLE_HERO_COLLAPSED_HEIGHT;
-// Mock/seed species have no generated wikiArticle — fall back to
-// repeating the one real sentence they do have, purely so that path still renders something.
-const FALLBACK_ARTICLE_PARAGRAPH_COUNT = 5;
 const SCROLL_EVENT_THROTTLE_MS = 16;
 const RESOLVE_ERROR_TEXT = "Couldn't open this plant. Try again.";
 const RATE_LIMITED_TEXT = "We're getting a lot of requests right now. Please try again in a moment.";
 
 type ArticleParagraph = { id: string; text: string };
 
+// Every species carries an article (shipped ones from catalogArticles.ts, searched ones written on
+// open). A species without one is defensive only: its description is shown once, not padded out.
 function getArticleParagraphs(species: PlantSpecies): ArticleParagraph[] {
   const paragraphs = species.wikiArticle
     ? species.wikiArticle.split('\n\n').filter(paragraph => paragraph.trim().length > 0)
-    : Array.from({ length: FALLBACK_ARTICLE_PARAGRAPH_COUNT }, () => species.description);
+    : [species.description];
 
   return paragraphs.map((text, position) => ({ id: `${species.speciesId}-paragraph-${position}`, text }));
 }
@@ -62,7 +61,7 @@ function prefetchIfRemote(source: ImageSourcePropType): void {
 }
 
 export function SpeciesInfoScreen({ navigation, route }: SpeciesInfoScreenProps) {
-  const { addSearchHistoryEntry, getSpeciesById, resolveSpeciesById } = usePlantData();
+  const { addSearchHistoryEntry, getSpeciesById, markSpeciesOpened, resolveSpeciesById } = usePlantData();
   const dispatch = useAppDispatch();
   const speciesIdParam = route.params?.speciesId;
   const species = getSpeciesById(speciesIdParam);
@@ -110,6 +109,12 @@ export function SpeciesInfoScreen({ navigation, route }: SpeciesInfoScreenProps)
       speciesName: species.speciesName,
     }));
   }, [dispatch, isFavorite, species]);
+
+  // Showing a plant is what opens it: a stored one reopened stays among the most recently opened.
+  const openedSpeciesId = species?.speciesId;
+  React.useEffect(() => {
+    if (openedSpeciesId) markSpeciesOpened(openedSpeciesId);
+  }, [markSpeciesOpened, openedSpeciesId]);
 
   // Optimistic navigation: LibraryScreen navigates here the instant a search result is tapped,
   // before the full species (facts, photo, generated copy) has resolved — resolve it here instead

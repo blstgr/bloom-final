@@ -37,12 +37,27 @@ function mockChatCompletion(...contents: GeneratedSpeciesCopy[]) {
   return fetchMock;
 }
 
-function mockRawChatCompletion(rawContent: string) {
-  global.fetch = jest.fn().mockResolvedValueOnce({
-    json: () => Promise.resolve({ choices: [{ message: { content: rawContent } }] }),
-    ok: true,
-  }) as unknown as typeof fetch;
+function mockRawChatCompletion(...rawContents: string[]) {
+  const fetchMock = jest.fn();
+  rawContents.forEach(rawContent => {
+    fetchMock.mockResolvedValueOnce({
+      json: () => Promise.resolve({ choices: [{ message: { content: rawContent } }] }),
+      ok: true,
+    });
+  });
+  global.fetch = fetchMock as unknown as typeof fetch;
+  return fetchMock;
 }
+
+function article(...paragraphs: string[]) {
+  return paragraphs.join('\n\n');
+}
+
+const VALID_COPY: GeneratedSpeciesCopy = {
+  category: 'Independent roommate',
+  description: 'Short description.',
+  wikiArticle: article('One.', 'Two.', 'Three.', 'Four.'),
+};
 
 describe('generateSpeciesCopy', () => {
   it('returns the generated copy as-is when the description fits the budget', async () => {
@@ -100,9 +115,10 @@ describe('generateSpeciesCopy', () => {
     expect(result.description.endsWith('.')).toBe(true);
   });
 
-  it('trims an overlong wikiArticle to a hard character backstop, without ever regenerating it', async () => {
+  it('never regenerates an overlong wikiArticle, and keeps a one-paragraph one whole', async () => {
     // Unlike description, wikiArticle never gets a retry call — the whole point of capping it was
-    // to cut latency, and a retry call would undo that. Only a deterministic trim.
+    // to cut latency, and a retry call would undo that. With no middle paragraph to shorten, it is
+    // kept as written rather than cut (ruling E4, final-project-spec §3.8).
     const sentence = 'x'.repeat(WIKI_ARTICLE_MAX_CHARS - 10);
     const tooLong: GeneratedSpeciesCopy = {
       category: 'Independent Roommate',
@@ -112,8 +128,7 @@ describe('generateSpeciesCopy', () => {
     const fetchMock = mockChatCompletion(tooLong);
 
     const result = await generateSpeciesCopy(RESOLVED_FACTS, RAW_DETAILS);
-    expect(result.wikiArticle.length).toBeLessThanOrEqual(WIKI_ARTICLE_MAX_CHARS);
-    expect(result.wikiArticle.endsWith('.')).toBe(true);
+    expect(result.wikiArticle).toBe(tooLong.wikiArticle);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -136,8 +151,8 @@ describe('generateSpeciesCopy', () => {
     await expect(generateSpeciesCopy(RESOLVED_FACTS, RAW_DETAILS)).rejects.toBeInstanceOf(PlantCopyApiError);
   });
 
-  it('throws a classified PlantCopyApiError when the model returns malformed JSON', async () => {
-    mockRawChatCompletion('{not valid json');
+  it('throws a classified PlantCopyApiError when the model returns malformed JSON twice', async () => {
+    mockRawChatCompletion('{not valid json', '{still not valid');
 
     await expect(generateSpeciesCopy(RESOLVED_FACTS, RAW_DETAILS)).rejects.toMatchObject<Partial<PlantCopyApiError>>({
       kind: 'unknown',
@@ -145,7 +160,8 @@ describe('generateSpeciesCopy', () => {
   });
 
   it('throws a classified PlantCopyApiError when the response is missing a required field', async () => {
-    mockRawChatCompletion(JSON.stringify({ category: 'Independent Roommate', description: 'desc' }));
+    const missing = JSON.stringify({ category: 'Independent Roommate', description: 'desc' });
+    mockRawChatCompletion(missing, missing);
 
     await expect(generateSpeciesCopy(RESOLVED_FACTS, RAW_DETAILS)).rejects.toMatchObject<Partial<PlantCopyApiError>>({
       kind: 'unknown',
@@ -153,12 +169,102 @@ describe('generateSpeciesCopy', () => {
   });
 
   it('throws a classified PlantCopyApiError when a field has the wrong type', async () => {
-    mockRawChatCompletion(
-      JSON.stringify({ category: 'Independent Roommate', description: 123, wikiArticle: 'article' }),
-    );
+    const wrongType = JSON.stringify({ category: 'Independent Roommate', description: 123, wikiArticle: 'article' });
+    mockRawChatCompletion(wrongType, wrongType);
 
     await expect(generateSpeciesCopy(RESOLVED_FACTS, RAW_DETAILS)).rejects.toMatchObject<Partial<PlantCopyApiError>>({
       kind: 'unknown',
     });
+  });
+
+  it('draws once more when the first response is malformed JSON, and returns the second', async () => {
+    const fetchMock = mockRawChatCompletion('{not valid json', JSON.stringify(VALID_COPY));
+
+    expect(await generateSpeciesCopy(RESOLVED_FACTS, RAW_DETAILS)).toEqual(VALID_COPY);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('draws once more when the first response is missing a field', async () => {
+    const fetchMock = mockRawChatCompletion(JSON.stringify({ category: 'x', description: 'y' }), JSON.stringify(VALID_COPY));
+
+    expect(await generateSpeciesCopy(RESOLVED_FACTS, RAW_DETAILS)).toEqual(VALID_COPY);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries a malformed response only once', async () => {
+    const fetchMock = mockRawChatCompletion('{bad', '{bad', JSON.stringify(VALID_COPY));
+
+    await expect(generateSpeciesCopy(RESOLVED_FACTS, RAW_DETAILS)).rejects.toBeInstanceOf(PlantCopyApiError);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry a transport failure', async () => {
+    const fetchMock = jest.fn().mockResolvedValueOnce({ ok: false, status: 500 });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(generateSpeciesCopy(RESOLVED_FACTS, RAW_DETAILS)).rejects.toBeInstanceOf(PlantCopyApiError);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([3, 5])('keeps an article of %i paragraphs as returned, without asking again', async count => {
+    const paragraphs = Array.from({ length: count }, (_, index) => `Paragraph ${index + 1}.`);
+    const fetchMock = mockChatCompletion({ ...VALID_COPY, wikiArticle: article(...paragraphs) });
+
+    const result = await generateSpeciesCopy(RESOLVED_FACTS, RAW_DETAILS);
+    expect(result.wikiArticle).toBe(article(...paragraphs));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('shortens an overlong article from the middle, so the closing paragraph survives', async () => {
+    const sentence = `${'w'.repeat(99)}.`;
+    const middle = Array.from({ length: 5 }, () => sentence).join(' ');
+    const closing = 'Keep it away from cats. That is the closing paragraph.';
+    const tooLong = article('An opening.', middle, middle, middle, closing);
+    expect(tooLong.length).toBeGreaterThan(WIKI_ARTICLE_MAX_CHARS);
+    mockChatCompletion({ ...VALID_COPY, wikiArticle: tooLong });
+
+    const result = await generateSpeciesCopy(RESOLVED_FACTS, RAW_DETAILS);
+    const paragraphs = result.wikiArticle.split('\n\n');
+    expect(result.wikiArticle.length).toBeLessThanOrEqual(WIKI_ARTICLE_MAX_CHARS);
+    expect(paragraphs[0]).toBe('An opening.');
+    expect(paragraphs[paragraphs.length - 1]).toBe(closing);
+    expect(paragraphs).toHaveLength(5);
+  });
+
+  it('never empties a middle paragraph while shortening, so the paragraph count holds', async () => {
+    // The longest middle paragraph is a single sentence; taking it would drop the article to three
+    // paragraphs. The sentences come out of the other middle paragraph instead.
+    const opening = `${'o'.repeat(399)}.`;
+    const singleSentenceMiddle = `${'s'.repeat(449)}.`;
+    const shortSentence = `${'m'.repeat(99)}.`;
+    const multiSentenceMiddle = [shortSentence, shortSentence, shortSentence].join(' ');
+    const closing = `${'c'.repeat(399)}.`;
+    const tooLong = article(opening, singleSentenceMiddle, multiSentenceMiddle, closing);
+    expect(tooLong.length).toBeGreaterThan(WIKI_ARTICLE_MAX_CHARS);
+    mockChatCompletion({ ...VALID_COPY, wikiArticle: tooLong });
+
+    const result = await generateSpeciesCopy(RESOLVED_FACTS, RAW_DETAILS);
+    expect(result.wikiArticle.length).toBeLessThanOrEqual(WIKI_ARTICLE_MAX_CHARS);
+    expect(result.wikiArticle.split('\n\n')).toEqual([opening, singleSentenceMiddle, shortSentence, closing]);
+  });
+
+  it('keeps every paragraph when even the shortest shape is over the cap, rather than cut the end', async () => {
+    const opening = `${'o'.repeat(799)}.`;
+    const middle = `${'m'.repeat(99)}.`;
+    const closing = `${'c'.repeat(799)}.`;
+    const tooLong = article(opening, middle, middle, closing);
+    mockChatCompletion({ ...VALID_COPY, wikiArticle: tooLong });
+
+    const result = await generateSpeciesCopy(RESOLVED_FACTS, RAW_DETAILS);
+    expect(result.wikiArticle).toBe(tooLong);
+  });
+
+  it('writes the article from the same kind of facts block as the shipped plants', async () => {
+    const fetchMock = mockChatCompletion(VALID_COPY);
+
+    await generateSpeciesCopy(RESOLVED_FACTS, RAW_DETAILS);
+    const prompt: string = JSON.parse(fetchMock.mock.calls[0][1].body).messages[0].content;
+    expect(prompt).toContain('"scientificName":"Zamioculcas zamiifolia","careLevel":"Moderate"');
+    expect(prompt).toContain('"waterEveryDays":14');
   });
 });
