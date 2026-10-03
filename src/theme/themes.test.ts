@@ -72,8 +72,9 @@ describe.each([
   });
 
   it('badge content reads on its badge', () => {
-    const { badge } = theme.components;
-    expect(contrast(badge.lightContent, badge.light)).toBeGreaterThanOrEqual(AA_BODY);
+    const { badge, glass } = theme.components;
+    // The light badge is glass; its opaque stand-in is what the fill renders as over the page.
+    expect(contrast(theme.colors.text.primary, glass.opaque)).toBeGreaterThanOrEqual(AA_BODY);
     expect(contrast(badge.darkContent, badge.dark)).toBeGreaterThanOrEqual(AA_BODY);
     expect(contrast(badge.countLabel, badge.count)).toBeGreaterThanOrEqual(AA_LARGE_OR_UI);
   });

@@ -49,12 +49,10 @@ export type Theme = {
       /** Which appearance iOS Liquid Glass renders in. */
       liquidScheme: ThemeMode;
     };
-    /** Badges sit on photos and keep their own colours in both modes. */
+    /** The count badge and the dark badge keep their own colours; the light badge is glass. */
     badge: {
       count: string;
       countLabel: string;
-      light: string;
-      lightContent: string;
       dark: string;
       darkContent: string;
     };
@@ -102,8 +100,6 @@ function buildComponents(colors: Theme['colors'], specific: ModeSpecificComponen
     badge: {
       count: colors.danger,
       countLabel: palette.white,
-      light: palette.white,
-      lightContent: palette.ink,
       dark: colors.accent,
       darkContent: palette.white,
     },

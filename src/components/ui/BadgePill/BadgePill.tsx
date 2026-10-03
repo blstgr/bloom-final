@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { makeThemedStyles, radii, sizes, spacing } from '../../../theme';
 import { AppText } from '../AppText';
 import { Badge } from '../Badge';
+import { GlassView } from '../GlassView';
 import { type IconName } from '../Icon';
 
 export type BadgePillVariant = 'transparent' | 'inverted' | 'default';
@@ -32,10 +33,11 @@ export function BadgePill({ badgeVariant, day, icon = 'water', label, month, var
   const line2 = month ?? parts.slice(1).join(' ');
 
   return (
-    <View style={[styles.base, variant === 'transparent' ? styles.transparent : themedStyles[variant]]}>
+    <View style={[styles.base, variant === 'inverted' ? themedStyles.inverted : styles.transparent]}>
+      {variant === 'default' ? <GlassView style={StyleSheet.absoluteFill} /> : null}
       <Badge icon={icon} variant={badgeStyle} />
-      {/* The filled pills sit on photos and take the badge's own colours; the transparent one sits
-       * on the page, so its label follows the mode's text colour. */}
+      {/* The dark pill takes the badge's own colours; the light one is glass and the transparent one
+       * sits on the page, so their labels follow the mode's text colour. */}
       <AppText
         style={[
           styles.label,
@@ -50,11 +52,8 @@ export function BadgePill({ badgeVariant, day, icon = 'water', label, month, var
 }
 
 const useThemedStyles = makeThemedStyles(theme => ({
-  default: {
-    backgroundColor: theme.components.badge.light,
-  },
   defaultLabel: {
-    color: theme.components.badge.lightContent,
+    color: theme.colors.text.primary,
   },
   inverted: {
     backgroundColor: theme.components.badge.dark,
@@ -75,7 +74,8 @@ const styles = StyleSheet.create({
   label: {
     textAlign: 'center',
   },
-  // Theme-independent: the transparent pill sits on the page and has no fill of its own.
+  // Theme-independent: the transparent pill has no fill of its own, and the light pill's comes from
+  // the GlassView behind its content.
   transparent: {
     backgroundColor: 'transparent',
   },

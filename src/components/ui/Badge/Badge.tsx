@@ -3,6 +3,7 @@ import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { makeThemedStyles, radii, sizes, useTheme } from '../../../theme';
 import { AppText } from '../AppText';
+import { GlassView } from '../GlassView';
 import { Icon, type IconName } from '../Icon';
 
 export type BadgeVariant = 'default' | 'inverted' | 'alert' | 'count' | 'icon';
@@ -46,7 +47,7 @@ export function Badge({
   style,
   variant = 'default',
 }: BadgeProps) {
-  const { badge } = useTheme().components;
+  const theme = useTheme();
   const themedStyles = useThemedStyles();
   const countLabel = label ?? (typeof count === 'number' ? `${count}` : undefined);
 
@@ -66,13 +67,13 @@ export function Badge({
       <View
         style={[
           styles.count,
-          themedStyles.count,
-          inverted && themedStyles.countInverted,
+          !inverted && themedStyles.count,
           size === 'small' && styles.small,
           style,
         ]}>
+        {inverted ? <GlassView style={StyleSheet.absoluteFill} /> : null}
         <AppText
-          style={inverted ? themedStyles.countInvertedLabel : themedStyles.countLabel}
+          style={inverted ? themedStyles.glassLabel : themedStyles.countLabel}
           variant="bodyS">
           {countLabel}
         </AppText>
@@ -84,39 +85,29 @@ export function Badge({
   const inverted = variant === 'inverted';
 
   return (
-    <View
-      style={[
-        styles.icon,
-        themedStyles.icon,
-        inverted && themedStyles.iconInverted,
-        style,
-      ]}>
+    <View style={[styles.icon, inverted && themedStyles.iconInverted, style]}>
+      {inverted ? null : <GlassView style={StyleSheet.absoluteFill} />}
       <Icon
         name={icon ?? 'water'}
         size={sizes.icon.sm}
-        color={inverted ? badge.darkContent : badge.lightContent}
+        color={inverted ? theme.components.badge.darkContent : theme.colors.icon.primary}
       />
     </View>
   );
 }
 
-// Badges sit on photos, so they keep their own colours in both modes (components.badge) rather
-// than following the text and surface roles, which flip with the mode.
+// The light badge is the glass of an inactive chip (Figma 530:2728), so it and its content follow
+// the mode like every glass surface. The count and the dark badge keep their own colours
+// (components.badge): the dark one is the accent, like the primary button (530:2722).
 const useThemedStyles = makeThemedStyles(theme => ({
   count: {
     backgroundColor: theme.components.badge.count,
   },
-  countInverted: {
-    backgroundColor: theme.components.badge.light,
-  },
-  countInvertedLabel: {
-    color: theme.components.badge.lightContent,
-  },
   countLabel: {
     color: theme.components.badge.countLabel,
   },
-  icon: {
-    backgroundColor: theme.components.badge.light,
+  glassLabel: {
+    color: theme.colors.text.primary,
   },
   iconInverted: {
     backgroundColor: theme.components.badge.dark,
