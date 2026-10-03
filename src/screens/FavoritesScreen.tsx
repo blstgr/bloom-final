@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { PhotoGrid } from '../components/ui/PhotoGrid';
 import { PlantCard } from '../components/ui/PlantCard';
@@ -17,6 +17,10 @@ import {
 } from '../navigation';
 import { useAppSelector } from '../store/hooks';
 import { layout, spacing } from '../theme';
+
+// The same top block as the Library (Figma `506:4205`): the title block's 24 bottom padding plus the
+// 16 column gap down to the chips.
+const TITLE_TO_CHIPS_GAP = spacing.xl + spacing.md;
 
 export function FavoritesScreen({ navigation }: FavoritesScreenProps) {
   const { openSettings, openSpeciesInfo } = useTabScreenNavigation(navigation);
@@ -61,17 +65,23 @@ export function FavoritesScreen({ navigation }: FavoritesScreenProps) {
           title="The maybe list"
         />
       )}
+      // Fixed with the title as one top block, as in the Library: the grid scrolls below the chips
+      // and is cut at their edge (user request, 2026-10-04).
+      pinnedHeader={(
+        <View style={styles.pinnedControls}>
+          <Tabs
+            activeKey={effectiveActiveTab}
+            edgeInset={layout.screenPadding}
+            onTabPress={setActiveTab}
+            tabs={availableTabs}
+          />
+        </View>
+      )}
       scrollableContent
-      scrollableContentSharesTopGap
+      stackedGap={TITLE_TO_CHIPS_GAP}
       contentLayout="start"
       contentStyle={styles.content}
       reserveBottomBarSpace>
-      <Tabs
-        activeKey={effectiveActiveTab}
-        edgeInset={layout.screenPadding}
-        onTabPress={setActiveTab}
-        tabs={availableTabs}
-      />
       <PhotoGrid>
         {visibleSpecies.map(species => (
           <PlantCard
@@ -91,7 +101,10 @@ export function FavoritesScreen({ navigation }: FavoritesScreenProps) {
 const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
-    gap: spacing.xl,
     paddingHorizontal: layout.screenPadding,
+  },
+  // The bottom padding is the gap to the grid, and the line the grid scrolls under.
+  pinnedControls: {
+    paddingBottom: spacing.md,
   },
 });
