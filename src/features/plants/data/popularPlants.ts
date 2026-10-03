@@ -1,5 +1,5 @@
 import { buildPlantDescription } from './plantDescription';
-import type { PlantSpecies } from './types';
+import type { PhotoCredit, PlantSpecies } from './types';
 
 /**
  * Popular indoor houseplants: the catalog the Library grid ranks by climate (docs/search-spec.md §3).
@@ -30,8 +30,6 @@ export type PopularPlant = {
   popularityRank: number;
   speciesId: string;
 };
-
-type PhotoCredit = { photographer: string; photoUrl: string };
 
 function unsplash(url: string): { uri: string } {
   return { uri: url };

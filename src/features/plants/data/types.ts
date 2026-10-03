@@ -39,3 +39,6 @@ export type PlantDetection = {
    * identifyAndResolveSpecies/resolveSpeciesFromPerenualId. */
   speciesId?: string;
 };
+
+/** Who took a hotlinked Unsplash photo, and its page. */
+export type PhotoCredit = { photographer: string; photoUrl: string };

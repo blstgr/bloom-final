@@ -1,19 +1,36 @@
 import { buildPlantDescription } from './plantDescription';
-import type { OwnedPlant, PlantSpecies } from './types';
+import type { OwnedPlant, PhotoCredit, PlantSpecies } from './types';
 
 
 const marbleQueenPothos = require('../../../assets/images/marble-queen-pothos.jpg');
 const moneyTree = require('../../../assets/images/money-tree.jpg');
-// Temporary Monstera 3 owned-plant photo for the mock dataset. Replace with a final licensed
-// release asset before shipping the production seed data.
-const temporaryMonsteraThree = require('../../../assets/images/monstera-3-temporary.jpg');
 const monsteraSunset = require('../../../assets/images/monstera-deliciosa-sunset.jpg');
 const monsteraFull = require('../../../assets/images/monstera-deliciosa.jpg');
 const parlorPalm = require('../../../assets/images/parlor-palm.jpg');
 const prayerPlant = require('../../../assets/images/prayer-plant.jpg');
 const rubberPlant = require('../../../assets/images/rubber-plant.jpg');
-const variegatedPeperomia = require('../../../assets/images/variegated-peperomia.jpg');
 const zzPlant = require('../../../assets/images/zz-plant.jpg');
+
+/**
+ * Seed species with no bundled photo of their own: Unsplash, hotlinked as Unsplash's guidelines
+ * require, like the popular catalog. Each used to borrow another plant's photo.
+ */
+const SEED_PHOTO_URLS = {
+  'variegated-peperomia': 'https://images.unsplash.com/photo-1699568751303-57fad48a6161?ixid=M3w5OTMwOTJ8MHwxfHNlYXJjaHw1fHx2YXJpZWdhdGVkJTIwcGVwZXJvbWlhfGVufDB8MXx8fDE3OTEwMzc1Mzd8MA&ixlib=rb-4.1.0&w=600&q=80&fit=crop',
+  'zebra-haworthia': 'https://images.unsplash.com/photo-1562396442-16b7a4141997?ixid=M3w5OTMwOTJ8MHwxfHNlYXJjaHwzfHxoYXdvcnRoaWElMjBmYXNjaWF0YXxlbnwwfDF8fHwxNzkxMDM3NTQwfDA&ixlib=rb-4.1.0&w=600&q=80&fit=crop',
+  'zebra-cactus': 'https://images.unsplash.com/photo-1757487210892-800f08237c48?ixid=M3w5OTMwOTJ8MHwxfHNlYXJjaHw1fHxoYXdvcnRoaWElMjBmYXNjaWF0YXxlbnwwfDF8fHwxNzkxMDM3NTQwfDA&ixlib=rb-4.1.0&w=600&q=80&fit=crop',
+  'zebrina': 'https://images.unsplash.com/photo-1747774504116-ed3319ce061d?ixid=M3w5OTMwOTJ8MHwxfHNlYXJjaHwxfHx0cmFkZXNjYW50aWElMjB6ZWJyaW5hfGVufDB8MXx8fDE3OTEwMzc1Mzl8MA&ixlib=rb-4.1.0&w=600&q=80&fit=crop',
+  'zygocactus': 'https://images.unsplash.com/photo-1776186593057-60165f86a4f2?ixid=M3w5OTMwOTJ8MHwxfHNlYXJjaHw0fHxjaHJpc3RtYXMlMjBjYWN0dXN8ZW58MHwxfHx8MTc5MTAzNzUzOHww&ixlib=rb-4.1.0&w=600&q=80&fit=crop',
+} as const;
+
+/** Unsplash photographers, by species id. */
+export const SEED_PLANT_PHOTO_CREDITS: Record<keyof typeof SEED_PHOTO_URLS, PhotoCredit> = {
+  'variegated-peperomia': { photographer: 'Karl Moore', photoUrl: 'https://unsplash.com/photos/a-potted-plant-sitting-on-top-of-a-wooden-table-McyViy9DEeA' },
+  'zebra-haworthia': { photographer: 'Izdhan Imran', photoUrl: 'https://unsplash.com/photos/green-leafed-plant-cDTb-MPm078' },
+  'zebra-cactus': { photographer: 'Jeremy Mowery', photoUrl: 'https://unsplash.com/photos/a-potted-succulent-plant-with-white-speckles-JOXwtp0DBP0' },
+  'zebrina': { photographer: 'Emils Nemse', photoUrl: 'https://unsplash.com/photos/a-close-up-of-a-colorful-plant-yOBxfr59Or8' },
+  'zygocactus': { photographer: 'Дарья Шкаруба', photoUrl: 'https://unsplash.com/photos/a-christmas-cactus-plant-with-green-leaves-and-buds-816rHlz0siE' },
+};
 
 const WATERING_INTERVAL_DAYS = 14;
 const DETAIL_IMAGE_URLS = [
@@ -161,9 +178,9 @@ export const mockSpecies: PlantSpecies[] = [
       repotYears: '3',
       wateringIntervalDays: 12,
     }),
-    detailImage: variegatedPeperomia,
-    detailImageUrl: DETAIL_IMAGE_URLS[1],
-    image: variegatedPeperomia,
+    detailImage: { uri: SEED_PHOTO_URLS['variegated-peperomia'] },
+    detailImageUrl: SEED_PHOTO_URLS['variegated-peperomia'],
+    image: { uri: SEED_PHOTO_URLS['variegated-peperomia'] },
     isToxicToPets: false,
     lightNeed: 'bright',
     speciesId: 'variegated-peperomia',
@@ -179,9 +196,9 @@ export const mockSpecies: PlantSpecies[] = [
       repotYears: '3',
       wateringIntervalDays: WATERING_INTERVAL_DAYS,
     }),
-    detailImage: temporaryMonsteraThree,
-    detailImageUrl: DETAIL_IMAGE_URLS[3],
-    image: temporaryMonsteraThree,
+    detailImage: { uri: SEED_PHOTO_URLS['zebra-haworthia'] },
+    detailImageUrl: SEED_PHOTO_URLS['zebra-haworthia'],
+    image: { uri: SEED_PHOTO_URLS['zebra-haworthia'] },
     isToxicToPets: false,
     lightNeed: 'bright',
     speciesId: 'zebra-haworthia',
@@ -197,9 +214,9 @@ export const mockSpecies: PlantSpecies[] = [
       repotYears: '3',
       wateringIntervalDays: WATERING_INTERVAL_DAYS,
     }),
-    detailImage: marbleQueenPothos,
-    detailImageUrl: DETAIL_IMAGE_URLS[4],
-    image: marbleQueenPothos,
+    detailImage: { uri: SEED_PHOTO_URLS['zebra-cactus'] },
+    detailImageUrl: SEED_PHOTO_URLS['zebra-cactus'],
+    image: { uri: SEED_PHOTO_URLS['zebra-cactus'] },
     isToxicToPets: false,
     lightNeed: 'bright',
     speciesId: 'zebra-cactus',
@@ -215,9 +232,9 @@ export const mockSpecies: PlantSpecies[] = [
       repotYears: '2',
       wateringIntervalDays: WATERING_INTERVAL_DAYS,
     }),
-    detailImage: prayerPlant,
-    detailImageUrl: DETAIL_IMAGE_URLS[5],
-    image: prayerPlant,
+    detailImage: { uri: SEED_PHOTO_URLS.zebrina },
+    detailImageUrl: SEED_PHOTO_URLS.zebrina,
+    image: { uri: SEED_PHOTO_URLS.zebrina },
     isToxicToPets: true,
     lightNeed: 'bright',
     speciesId: 'zebrina',
@@ -233,9 +250,9 @@ export const mockSpecies: PlantSpecies[] = [
       repotYears: '2-3',
       wateringIntervalDays: WATERING_INTERVAL_DAYS,
     }),
-    detailImage: variegatedPeperomia,
-    detailImageUrl: DETAIL_IMAGE_URLS[0],
-    image: variegatedPeperomia,
+    detailImage: { uri: SEED_PHOTO_URLS.zygocactus },
+    detailImageUrl: SEED_PHOTO_URLS.zygocactus,
+    image: { uri: SEED_PHOTO_URLS.zygocactus },
     isToxicToPets: false,
     lightNeed: 'bright',
     speciesId: 'zygocactus',
