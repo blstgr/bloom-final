@@ -35,6 +35,7 @@ const CAMERA_UNAVAILABLE_ERROR_CODE = 'camera_unavailable';
 const CAMERA_PERMISSION_ERROR_CODE = 'permission';
 const PERMISSION_ALERT_TEXT = 'Camera access needed to identify your plants.';
 const PERMISSION_ACTION_LABEL = 'Open settings';
+const CAPTURE_FAILED_ALERT_TEXT = 'Camera could not capture a plant photo. Try again.';
 
 export function AddPlantCameraScreen({ navigation, route }: AddPlantCameraScreenProps) {
   const { createDetection } = usePlantData();
@@ -92,7 +93,8 @@ export function AddPlantCameraScreen({ navigation, route }: AddPlantCameraScreen
         return;
       }
 
-      setAlertText(result.errorMessage ?? 'Camera could not capture a plant photo. Try again.');
+      // The picker's own errorMessage is developer text, never shown to the user.
+      setAlertText(CAPTURE_FAILED_ALERT_TEXT);
       return;
     }
 
