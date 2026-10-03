@@ -152,7 +152,7 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
       <SettingsPanel rows={themeRows} />
       <SettingsPanel
         rows={[
-          { label: 'Email', value: 'plantkiller@gmail.com', variant: 'textWithLabel' },
+          { value: 'plantkiller@gmail.com', variant: 'text' },
           { buttonLabel: 'Log out', onPress: handleLogout, variant: 'buttonOnly' },
         ]}
       />
