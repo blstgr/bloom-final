@@ -4,6 +4,8 @@ Bloom is a watering app for people who keep forgetting to water their plants. Yo
 Bloom tells you what the plant is and when it needs water, and shows which plants are thirsty
 today.
 
+![Adding a plant from a photo](docs/screenshots/final-add-plant.gif)
+
 What you can do in it:
 - identify a plant from a photo and add it to your plants
 - see which plants need water today and log a watering
